@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authenticateToken } from '../middleware/auth.js';
-import Package from '../models/Package.js';
+import { Package } from '../models/Package.js';
 import fs from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,7 +43,7 @@ const upload = multer({
 // Получить все пакеты
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const packages = await Package.find().sort({ createdAt: -1 });
+    const packages = await Package.findAll();
     res.json(packages);
   } catch (error) {
     res.status(500).json({ error: 'Ошибка получения пакетов', details: error.message });
@@ -68,7 +68,7 @@ router.post('/', authenticateToken, async (req, res) => {
   try {
     const { name, nameKZ, nameRU, iconColor, price, isActive } = req.body;
 
-    const packageItem = new Package({
+    const packageItem = await Package.create({
       name: name || '',
       nameKZ: nameKZ || name || '',
       nameRU: nameRU || name || '',
@@ -77,7 +77,6 @@ router.post('/', authenticateToken, async (req, res) => {
       isActive: isActive !== undefined ? isActive : true,
     });
 
-    await packageItem.save();
     res.json({ message: 'Пакет создан успешно', package: packageItem });
   } catch (error) {
     res.status(500).json({ error: 'Ошибка создания пакета', details: error.message });
@@ -89,19 +88,19 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { name, nameKZ, nameRU, iconColor, price, isActive } = req.body;
 
-    const packageItem = await Package.findById(req.params.id);
+    const packageItem = await Package.update(req.params.id, {
+      name,
+      nameKZ,
+      nameRU,
+      iconColor,
+      price,
+      isActive,
+    });
+
     if (!packageItem) {
       return res.status(404).json({ error: 'Пакет не найден' });
     }
 
-    if (name !== undefined) packageItem.name = name;
-    if (nameKZ !== undefined) packageItem.nameKZ = nameKZ;
-    if (nameRU !== undefined) packageItem.nameRU = nameRU;
-    if (iconColor !== undefined) packageItem.iconColor = iconColor;
-    if (price !== undefined) packageItem.price = price;
-    if (isActive !== undefined) packageItem.isActive = isActive;
-
-    await packageItem.save();
     res.json({ message: 'Пакет обновлен успешно', package: packageItem });
   } catch (error) {
     res.status(500).json({ error: 'Ошибка обновления пакета', details: error.message });
@@ -117,22 +116,22 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 
     // Удаляем файлы пакета
-    if (packageItem.files.kz?.fileUrl) {
+    if (packageItem.files.kz?.file_url) {
       try {
-        await fs.unlink(path.join(__dirname, '..', packageItem.files.kz.fileUrl));
+        await fs.unlink(path.join(__dirname, '..', packageItem.files.kz.file_url));
       } catch (err) {
         console.error('Ошибка удаления файла KZ:', err);
       }
     }
-    if (packageItem.files.ru?.fileUrl) {
+    if (packageItem.files.ru?.file_url) {
       try {
-        await fs.unlink(path.join(__dirname, '..', packageItem.files.ru.fileUrl));
+        await fs.unlink(path.join(__dirname, '..', packageItem.files.ru.file_url));
       } catch (err) {
         console.error('Ошибка удаления файла RU:', err);
       }
     }
 
-    await Package.deleteOne({ _id: req.params.id });
+    await Package.delete(req.params.id);
     res.json({ message: 'Пакет успешно удален' });
   } catch (error) {
     res.status(500).json({ error: 'Ошибка удаления пакета', details: error.message });
@@ -160,27 +159,26 @@ router.post('/:id/upload', authenticateToken, upload.single('file'), async (req,
 
     // Удаляем старый файл, если существует
     const oldFile = packageItem.files[language.toLowerCase()];
-    if (oldFile?.fileUrl) {
+    if (oldFile?.file_url) {
       try {
-        await fs.unlink(path.join(__dirname, '..', oldFile.fileUrl));
+        await fs.unlink(path.join(__dirname, '..', oldFile.file_url));
       } catch (err) {
         console.error('Ошибка удаления старого файла:', err);
       }
     }
 
     // Обновляем информацию о файле
-    packageItem.files[language.toLowerCase()] = {
+    await Package.updateFile(req.params.id, language, {
       fileUrl: `/uploads/packages/${req.file.filename}`,
       fileName: req.file.originalname,
       fileSize: req.file.size,
-      uploadedAt: new Date(),
-    };
+    });
 
-    await packageItem.save();
+    const updatedPackage = await Package.findById(req.params.id);
 
     res.json({
       message: 'Файл успешно загружен',
-      package: packageItem,
+      package: updatedPackage,
     });
   } catch (error) {
     if (req.file) {
@@ -204,16 +202,15 @@ router.delete('/:id/file/:language', authenticateToken, async (req, res) => {
     }
 
     const fileInfo = packageItem.files[language.toLowerCase()];
-    if (fileInfo?.fileUrl) {
+    if (fileInfo?.file_url) {
       try {
-        await fs.unlink(path.join(__dirname, '..', fileInfo.fileUrl));
+        await fs.unlink(path.join(__dirname, '..', fileInfo.file_url));
       } catch (err) {
         console.error('Ошибка удаления файла:', err);
       }
     }
 
-    packageItem.files[language.toLowerCase()] = {};
-    await packageItem.save();
+    await Package.deleteFile(id, language.toUpperCase());
 
     res.json({ message: 'Файл успешно удален' });
   } catch (error) {

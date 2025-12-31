@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { initDatabase, getPool } from './db/database.js';
 import authRoutes from './routes/auth.js';
 import publicQuestionsRoutes from './routes/publicQuestions.js';
 import packagesRoutes from './routes/packages.js';
@@ -25,13 +25,17 @@ app.use(express.urlencoded({ extended: true }));
 // Статическая раздача загруженных файлов
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Подключение к MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/blim-bilem', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('✅ MongoDB подключена'))
-.catch((err) => console.error('❌ Ошибка подключения к MongoDB:', err));
+// Подключение к PostgreSQL
+(async () => {
+  try {
+    await initDatabase();
+    const pool = getPool();
+    await pool.query('SELECT NOW()');
+    console.log('✅ PostgreSQL подключена');
+  } catch (err) {
+    console.error('❌ Ошибка подключения к PostgreSQL:', err);
+  }
+})();
 
 // Routes
 app.use('/api/auth', authRoutes);

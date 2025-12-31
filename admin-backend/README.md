@@ -1,6 +1,6 @@
 # Blim Bilem Admin Backend
 
-Backend API для админ-панели приложения Blim Bilem.
+Backend API для админ-панели приложения Blim Bilem на Node.js/Express с PostgreSQL.
 
 ## Установка
 
@@ -17,7 +17,7 @@ cp .env.example .env
 
 2. Отредактируйте `.env` и укажите:
    - `JWT_SECRET` - секретный ключ для JWT токенов
-   - `MONGODB_URI` - URI подключения к MongoDB
+   - `DATABASE_URL` или `POSTGRES_URL` - connection string для PostgreSQL
    - `ADMIN_DEFAULT_PASSWORD` - пароль администратора по умолчанию
 
 ## Запуск
@@ -38,6 +38,15 @@ npm start
 ```bash
 POST /api/auth/init
 ```
+
+## База данных
+
+Проект использует PostgreSQL. Таблицы создаются автоматически при первом запуске:
+- `admins` - администраторы
+- `public_questions` - общедоступные вопросы
+- `packages` - пакеты вопросов
+- `package_files` - файлы пакетов
+- `phrases` - финальные фразы
 
 ## API Endpoints
 
@@ -68,9 +77,10 @@ POST /api/auth/init
 
 ## Деплой на Render
 
-1. Создайте новый Web Service на Render
-2. Подключите MongoDB (можно использовать MongoDB Atlas)
-3. Установите переменные окружения в Render Dashboard
-4. Укажите Build Command: `npm install`
-5. Укажите Start Command: `npm start`
-
+1. Создайте PostgreSQL базу данных на Render
+2. Создайте Web Service и подключите базу данных
+3. Установите переменные окружения:
+   - `DATABASE_URL` или `POSTGRES_URL` - connection string из Dashboard базы данных
+   - `JWT_SECRET` - секретный ключ
+   - `ADMIN_DEFAULT_PASSWORD` - пароль администратора
+4. После деплоя инициализируйте администратора через `/api/auth/init`

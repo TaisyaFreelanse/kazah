@@ -1,6 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import Admin from '../models/Admin.js';
+import { Admin } from '../models/Admin.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -8,19 +8,15 @@ const router = express.Router();
 // Инициализация админа по умолчанию (только при первом запуске)
 router.post('/init', async (req, res) => {
   try {
-    const adminCount = await Admin.countDocuments();
+    const adminCount = await Admin.count();
     
     if (adminCount > 0) {
       return res.status(400).json({ error: 'Администратор уже инициализирован' });
     }
 
     const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
-    const admin = new Admin({
-      username: 'admin',
-      password: defaultPassword,
-    });
+    const admin = await Admin.create('admin', defaultPassword);
 
-    await admin.save();
     res.json({ message: 'Администратор создан успешно', username: 'admin' });
   } catch (error) {
     res.status(500).json({ error: 'Ошибка инициализации администратора', details: error.message });
@@ -36,12 +32,13 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Имя пользователя и пароль обязательны' });
     }
 
-    const admin = await Admin.findOne({ username });
+    const admin = await Admin.findByUsername(username);
     if (!admin) {
       return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
     }
 
-    const isPasswordValid = await admin.comparePassword(password);
+    const adminModel = new Admin();
+    const isPasswordValid = await adminModel.comparePassword(password, admin.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
     }
@@ -87,13 +84,15 @@ router.post('/change-password', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Администратор не найден' });
     }
 
-    const isPasswordValid = await admin.comparePassword(currentPassword);
+    // Получаем полные данные админа для проверки пароля
+    const adminFull = await Admin.findByUsername(admin.username);
+    const adminModel = new Admin();
+    const isPasswordValid = await adminModel.comparePassword(currentPassword, adminFull.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Неверный текущий пароль' });
     }
 
-    admin.password = newPassword;
-    await admin.save();
+    await Admin.updatePassword(req.user.id, newPassword);
 
     res.json({ message: 'Пароль успешно изменен' });
   } catch (error) {

@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authenticateToken } from '../middleware/auth.js';
-import PublicQuestion from '../models/PublicQuestion.js';
+import { PublicQuestion } from '../models/PublicQuestion.js';
 import fs from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,7 +42,7 @@ const upload = multer({
 // Получить информацию о загруженных файлах
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const questions = await PublicQuestion.find().sort({ uploadedAt: -1 });
+    const questions = await PublicQuestion.findAll();
     res.json(questions);
   } catch (error) {
     res.status(500).json({ error: 'Ошибка получения файлов', details: error.message });
@@ -64,26 +64,24 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
     }
 
     // Удаляем старый файл для этого языка, если существует
-    const oldQuestion = await PublicQuestion.findOne({ language });
-    if (oldQuestion && oldQuestion.fileUrl) {
+    const oldQuestion = await PublicQuestion.findByLanguage(language);
+    if (oldQuestion && oldQuestion.file_url) {
       try {
-        await fs.unlink(path.join(__dirname, '..', oldQuestion.fileUrl));
+        await fs.unlink(path.join(__dirname, '..', oldQuestion.file_url));
       } catch (err) {
         console.error('Ошибка удаления старого файла:', err);
       }
-      await PublicQuestion.deleteOne({ language });
+      await PublicQuestion.deleteByLanguage(language);
     }
 
     // Создаем новую запись
-    const publicQuestion = new PublicQuestion({
+    const publicQuestion = await PublicQuestion.create({
       language,
       fileUrl: `/uploads/public-questions/${req.file.filename}`,
       fileName: req.file.originalname,
       fileSize: req.file.size,
       uploadedBy: req.user.id,
     });
-
-    await publicQuestion.save();
 
     res.json({
       message: 'Файл успешно загружен',
@@ -108,12 +106,12 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     // Удаляем физический файл
     try {
-      await fs.unlink(path.join(__dirname, '..', question.fileUrl));
+      await fs.unlink(path.join(__dirname, '..', question.file_url));
     } catch (err) {
       console.error('Ошибка удаления файла:', err);
     }
 
-    await PublicQuestion.deleteOne({ _id: req.params.id });
+    await PublicQuestion.delete(req.params.id);
     res.json({ message: 'Файл успешно удален' });
   } catch (error) {
     res.status(500).json({ error: 'Ошибка удаления файла', details: error.message });

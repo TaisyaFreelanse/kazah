@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authenticateToken } from '../middleware/auth.js';
-import Phrase from '../models/Phrase.js';
+import { Phrase } from '../models/Phrase.js';
 import fs from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,7 +42,7 @@ const upload = multer({
 // Получить информацию о загруженных файлах
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const phrases = await Phrase.find().sort({ uploadedAt: -1 });
+    const phrases = await Phrase.findAll();
     res.json(phrases);
   } catch (error) {
     res.status(500).json({ error: 'Ошибка получения файлов', details: error.message });
@@ -63,26 +63,24 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
     }
 
     // Удаляем старый файл для этого языка, если существует
-    const oldPhrase = await Phrase.findOne({ language });
-    if (oldPhrase && oldPhrase.fileUrl) {
+    const oldPhrase = await Phrase.findByLanguage(language);
+    if (oldPhrase && oldPhrase.file_url) {
       try {
-        await fs.unlink(path.join(__dirname, '..', oldPhrase.fileUrl));
+        await fs.unlink(path.join(__dirname, '..', oldPhrase.file_url));
       } catch (err) {
         console.error('Ошибка удаления старого файла:', err);
       }
-      await Phrase.deleteOne({ language });
+      await Phrase.deleteByLanguage(language);
     }
 
     // Создаем новую запись
-    const phrase = new Phrase({
+    const phrase = await Phrase.create({
       language,
       fileUrl: `/uploads/phrases/${req.file.filename}`,
       fileName: req.file.originalname,
       fileSize: req.file.size,
       uploadedBy: req.user.id,
     });
-
-    await phrase.save();
 
     res.json({
       message: 'Файл успешно загружен',
@@ -106,12 +104,12 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     // Удаляем физический файл
     try {
-      await fs.unlink(path.join(__dirname, '..', phrase.fileUrl));
+      await fs.unlink(path.join(__dirname, '..', phrase.file_url));
     } catch (err) {
       console.error('Ошибка удаления файла:', err);
     }
 
-    await Phrase.deleteOne({ _id: req.params.id });
+    await Phrase.delete(req.params.id);
     res.json({ message: 'Файл успешно удален' });
   } catch (error) {
     res.status(500).json({ error: 'Ошибка удаления файла', details: error.message });
