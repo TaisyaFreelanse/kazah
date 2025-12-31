@@ -4,6 +4,7 @@ import '../providers/game_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/timer_service.dart';
 import '../services/question_service.dart';
+import '../services/package_service.dart';
 import '../widgets/timer_widget.dart';
 import '../widgets/answer_button.dart';
 import '../widgets/package_badge.dart';
@@ -22,6 +23,8 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   TimerService? _timerService;
+  final PackageService _packageService = PackageService();
+  Map<String, Color> _packageColors = {}; // Кэш цветов пакетов
   int _selectedAnswerIndex = -1;
   int _secondsRemaining = 13;
   Set<int> _hiddenAnswerIndices = {}; // Для подсказки 50/50
@@ -43,6 +46,9 @@ class _GameScreenState extends State<GameScreen> {
     
     print('=== ИНИЦИАЛИЗАЦИЯ ИГРЫ ===');
     print('Выбранный язык: "${languageProvider.currentLanguage}"');
+    
+    // Загружаем цвета пакетов из API
+    await _loadPackageColors();
     
     // Инициализируем таймер
     _timerService = TimerService(
@@ -140,18 +146,44 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  /// Загружает цвета пакетов из API
+  Future<void> _loadPackageColors() async {
+    try {
+      final packages = await _packageService.getActivePackages();
+      _packageColors = {
+        for (var package in packages) package.id: package.color,
+      };
+      print('Загружено цветов пакетов: ${_packageColors.length}');
+    } catch (e) {
+      print('Ошибка загрузки цветов пакетов: $e');
+      // Используем дефолтные цвета при ошибке
+      _packageColors = {
+        'more_questions': AppColors.packageMoreQuestions,
+        'history': AppColors.packageHistory,
+      };
+    }
+  }
+
+  /// Получает цвет значка пакета
   Color _getPackageColor(String? packageId) {
     if (packageId == null) return Colors.transparent;
     
-    // Маппинг ID пакетов на цвета
-    switch (packageId) {
-      case 'more_questions':
-        return AppColors.packageMoreQuestions;
-      case 'history':
-        return AppColors.packageHistory;
-      default:
-        return Colors.grey;
+    // Пытаемся получить цвет из кэша
+    if (_packageColors.containsKey(packageId)) {
+      return _packageColors[packageId]!;
     }
+    
+    // Если цвет не найден, пытаемся загрузить из API (асинхронно)
+    _packageService.getPackageColor(packageId).then((color) {
+      if (color != null && mounted) {
+        setState(() {
+          _packageColors[packageId] = color;
+        });
+      }
+    });
+    
+    // Возвращаем дефолтный цвет или серый
+    return _packageColors[packageId] ?? Colors.grey;
   }
 
   Widget _buildHintButton({

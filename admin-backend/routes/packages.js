@@ -40,7 +40,7 @@ const upload = multer({
   },
 });
 
-// Получить все пакеты
+// Получить все пакеты (только для админа)
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const packages = await Package.findAll();

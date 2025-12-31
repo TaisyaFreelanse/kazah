@@ -24,6 +24,13 @@ dependencies:
   
   # Fonts
   google_fonts: ^6.1.0
+  
+  # HTTP requests
+  http: ^1.1.0
+  
+  # Path utilities
+  path: ^1.8.3
+  path_provider: ^2.1.1
 
 dev_dependencies:
   flutter_test:

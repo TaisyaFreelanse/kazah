@@ -5,7 +5,9 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import PublicQuestions from './pages/PublicQuestions';
 import Packages from './pages/Packages';
+import PackageDetail from './pages/PackageDetail';
 import Phrases from './pages/Phrases';
+import ChangePassword from './pages/ChangePassword';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -40,10 +42,26 @@ function App() {
             }
           />
           <Route
+            path="/packages/:id"
+            element={
+              <ProtectedRoute>
+                <PackageDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/phrases"
             element={
               <ProtectedRoute>
                 <Phrases />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/change-password"
+            element={
+              <ProtectedRoute>
+                <ChangePassword />
               </ProtectedRoute>
             }
           />

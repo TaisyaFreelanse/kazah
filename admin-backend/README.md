@@ -61,14 +61,18 @@ POST /api/auth/init
 - `POST /api/public-questions/upload` - Загрузить Excel файл
 - `DELETE /api/public-questions/:id` - Удалить файл
 
-### Пакеты
-- `GET /api/packages` - Получить все пакеты
-- `GET /api/packages/:id` - Получить один пакет
-- `POST /api/packages` - Создать новый пакет
-- `PUT /api/packages/:id` - Обновить пакет
-- `DELETE /api/packages/:id` - Удалить пакет
-- `POST /api/packages/:id/upload` - Загрузить файл для пакета
-- `DELETE /api/packages/:id/file/:language` - Удалить файл пакета
+### Пакеты (Админ)
+- `GET /api/packages` - Получить все пакеты (требует авторизации)
+- `GET /api/packages/:id` - Получить один пакет (требует авторизации)
+- `POST /api/packages` - Создать новый пакет (требует авторизации)
+- `PUT /api/packages/:id` - Обновить пакет (требует авторизации)
+- `DELETE /api/packages/:id` - Удалить пакет (требует авторизации)
+- `POST /api/packages/:id/upload` - Загрузить файл для пакета (требует авторизации)
+- `DELETE /api/packages/:id/file/:language` - Удалить файл пакета (требует авторизации)
+
+### Пакеты (Публичный API для приложения)
+- `GET /api/public/packages` - Получить только активные пакеты (без авторизации)
+- `GET /api/public/packages/:id` - Получить активный пакет по ID (без авторизации)
 
 ### Фразы
 - `GET /api/phrases` - Получить список файлов

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../models/package_info.dart';
 import '../services/purchase_service.dart';
+import '../services/package_service.dart';
 import '../constants/colors.dart';
 import '../constants/strings.dart';
 import '../widgets/package_badge.dart';
@@ -16,35 +17,63 @@ class PackagesScreen extends StatefulWidget {
 
 class _PackagesScreenState extends State<PackagesScreen> {
   final PurchaseService _purchaseService = PurchaseService();
+  final PackageService _packageService = PackageService();
   List<PackageInfo> _packages = [];
   bool _isLoading = true;
 
   Future<void> _loadPackages() async {
-    // Создаем список пакетов с проверкой статуса покупки
-    final moreQuestionsPurchased = await _purchaseService.isPackagePurchased('more_questions');
-    final historyPurchased = await _purchaseService.isPackagePurchased('history');
-
-    final packages = [
-      PackageInfo(
-        id: 'more_questions',
-        nameKz: AppStrings.moreQuestions['KZ']!,
-        nameRu: AppStrings.moreQuestions['RU']!,
-        color: AppColors.packageMoreQuestions,
-        isPurchased: moreQuestionsPurchased,
-      ),
-      PackageInfo(
-        id: 'history',
-        nameKz: AppStrings.history['KZ']!,
-        nameRu: AppStrings.history['RU']!,
-        color: AppColors.packageHistory,
-        isPurchased: historyPurchased,
-      ),
-    ];
-
     setState(() {
-      _packages = packages;
-      _isLoading = false;
+      _isLoading = true;
     });
+
+    try {
+      // Загружаем пакеты из API
+      final packages = await _packageService.getActivePackages();
+      
+      // Проверяем статус покупки для каждого пакета
+      final packagesWithPurchaseStatus = <PackageInfo>[];
+      for (final package in packages) {
+        final isPurchased = await _purchaseService.isPackagePurchased(package.id);
+        packagesWithPurchaseStatus.add(PackageInfo(
+          id: package.id,
+          nameKz: package.nameKz,
+          nameRu: package.nameRu,
+          color: package.color,
+          isPurchased: isPurchased,
+          price: package.price,
+        ));
+      }
+
+      setState(() {
+        _packages = packagesWithPurchaseStatus;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Ошибка загрузки пакетов: $e');
+      // Fallback на пакеты по умолчанию
+      final moreQuestionsPurchased = await _purchaseService.isPackagePurchased('more_questions');
+      final historyPurchased = await _purchaseService.isPackagePurchased('history');
+
+      setState(() {
+        _packages = [
+          PackageInfo(
+            id: 'more_questions',
+            nameKz: AppStrings.moreQuestions['KZ']!,
+            nameRu: AppStrings.moreQuestions['RU']!,
+            color: AppColors.packageMoreQuestions,
+            isPurchased: moreQuestionsPurchased,
+          ),
+          PackageInfo(
+            id: 'history',
+            nameKz: AppStrings.history['KZ']!,
+            nameRu: AppStrings.history['RU']!,
+            color: AppColors.packageHistory,
+            isPurchased: historyPurchased,
+          ),
+        ];
+        _isLoading = false;
+      });
+    }
   }
 
   @override

@@ -39,6 +39,27 @@ class Package {
     return packages;
   }
 
+  static async findActive() {
+    const result = await query(
+      'SELECT * FROM packages WHERE is_active = true ORDER BY created_at DESC'
+    );
+    const packages = result.rows;
+
+    // Загружаем файлы для каждого пакета
+    for (const pkg of packages) {
+      const filesResult = await query(
+        'SELECT * FROM package_files WHERE package_id = $1',
+        [pkg.id]
+      );
+      pkg.files = {
+        kz: filesResult.rows.find(f => f.language === 'KZ') || {},
+        ru: filesResult.rows.find(f => f.language === 'RU') || {},
+      };
+    }
+
+    return packages;
+  }
+
   static async findById(id) {
     const result = await query(
       'SELECT * FROM packages WHERE id = $1',

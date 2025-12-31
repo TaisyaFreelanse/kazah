@@ -1,5 +1,6 @@
 import 'package:excel/excel.dart';
 import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import '../models/question.dart';
 
@@ -7,6 +8,7 @@ class ExcelParser {
   /// Парсит вопросы из Excel файла
   /// 
   /// [assetPath] - путь к файлу в assets (например, 'assets/data/questions_kz.xlsx')
+  ///               или путь к локальному файлу (например, '/path/to/file.xlsx')
   /// [difficulty] - если указана, парсит только вопросы этой сложности, иначе все
   /// [packageId] - ID пакета для помеченных вопросов (null для базовых)
   Future<List<Question>> parseQuestions({
@@ -16,9 +18,22 @@ class ExcelParser {
   }) async {
     try {
       print('Начинаем парсинг файла: $assetPath');
-      // Загружаем файл из assets
-      final ByteData data = await rootBundle.load(assetPath);
-      final Uint8List bytes = data.buffer.asUint8List();
+      
+      Uint8List bytes;
+      
+      // Проверяем, является ли путь локальным файлом
+      final file = File(assetPath);
+      if (await file.exists()) {
+        // Загружаем из локального файла
+        print('Загрузка из локального файла: $assetPath');
+        bytes = await file.readAsBytes();
+      } else {
+        // Загружаем из assets
+        print('Загрузка из assets: $assetPath');
+        final ByteData data = await rootBundle.load(assetPath);
+        bytes = data.buffer.asUint8List();
+      }
+      
       print('Файл загружен, размер: ${bytes.length} байт');
       
       // Открываем Excel файл

@@ -1,10 +1,14 @@
 import '../models/question.dart';
+import '../models/package_info.dart';
 import 'excel_parser.dart';
 import 'purchase_service.dart';
+import 'package_service.dart';
+import 'package_file_service.dart';
 
 class QuestionService {
   final ExcelParser _excelParser = ExcelParser();
   final PurchaseService _purchaseService = PurchaseService();
+  final PackageFileService _packageFileService = PackageFileService();
 
   /// Загружает все доступные вопросы (базовые + купленные пакеты)
   Future<List<Question>> getQuestions({
@@ -40,26 +44,82 @@ class QuestionService {
   }
 
   /// Загружает вопросы из конкретного пакета
+  /// Поддерживает как числовые ID из API, так и строковые (legacy)
+  /// Приоритет: загрузка с сервера > локальные assets
   Future<List<Question>> _loadPackageQuestions({
     required String packageId,
     required String language,
   }) async {
-    // Маппинг ID пакетов на файлы с учетом языка
+    // Сначала пытаемся получить информацию о пакете из API
+    final packageService = PackageService();
+    PackageInfo? packageInfo;
+    
+    try {
+      packageInfo = await packageService.getPackageById(packageId);
+    } catch (e) {
+      print('Не удалось получить информацию о пакете $packageId из API: $e');
+    }
+    
+    // Проверяем, является ли ID числовым (из API)
+    final isNumericId = int.tryParse(packageId) != null;
+    
+    // Приоритет 1: Пытаемся загрузить файл с сервера (для числовых ID из API)
+    if (isNumericId && packageInfo != null) {
+      try {
+        // Пытаемся загрузить файл с сервера
+        final filePath = await _packageFileService.downloadPackageFile(
+          packageId: packageId,
+          language: language,
+        );
+        
+        if (filePath != null) {
+          print('Загружаем вопросы из файла с сервера: $filePath');
+          try {
+            return await _excelParser.parseQuestions(
+              assetPath: filePath,
+              packageId: packageId,
+            );
+          } catch (e) {
+            print('Ошибка парсинга файла с сервера, пробуем fallback: $e');
+            // Продолжаем к fallback
+          }
+        }
+      } catch (e) {
+        print('Ошибка загрузки файла с сервера, пробуем fallback: $e');
+        // Продолжаем к fallback
+      }
+    }
+    
+    // Приоритет 2: Fallback на локальные assets (для обратной совместимости)
     String? assetPath;
-    switch (packageId) {
-      case 'history':
+    
+    if (isNumericId && packageInfo != null) {
+      // Для числовых ID из API используем маппинг по имени пакета
+      final packageName = packageInfo.nameKz.toLowerCase();
+      if (packageName.contains('тарих') || packageName.contains('история') || 
+          packageInfo.nameRu.toLowerCase().contains('история')) {
         assetPath = language == 'KZ'
             ? 'assets/data/history_kz.xlsx'
             : 'assets/data/history_ru.xlsx';
-        break;
-      case 'more_questions':
-        // TODO: Добавить файл для пакета "Больше вопросов"
-        // assetPath = language == 'KZ'
-        //     ? 'assets/data/more_questions_kz.xlsx'
-        //     : 'assets/data/more_questions_ru.xlsx';
-        break;
-      default:
-        return [];
+      } else if (packageName.contains('көбірек') || packageName.contains('больше') ||
+                 packageInfo.nameRu.toLowerCase().contains('больше')) {
+        // Для пакета "Больше вопросов" используем fallback на assets или возвращаем пустой список
+        assetPath = null; // Файлы могут быть загружены с сервера выше
+      }
+    } else {
+      // Для строковых ID (legacy) используем старый маппинг
+      switch (packageId) {
+        case 'history':
+          assetPath = language == 'KZ'
+              ? 'assets/data/history_kz.xlsx'
+              : 'assets/data/history_ru.xlsx';
+          break;
+        case 'more_questions':
+          // Для пакета "Больше вопросов" нет локальных файлов
+          return [];
+        default:
+          return [];
+      }
     }
 
     if (assetPath == null) return [];
@@ -129,14 +189,42 @@ class QuestionService {
   }
 
   /// Получает список купленных пакетов
+  /// Возвращает ID пакетов, которые были куплены пользователем
+  /// ID могут быть как строковыми (для старых покупок), так и числовыми (из API)
   Future<List<String>> getPurchasedPackages() async {
-    // Проверяем все доступные пакеты
-    final availablePackages = ['history', 'more_questions'];
+    // Получаем все доступные пакеты из API
+    final packageService = PackageService();
     List<String> purchased = [];
-
-    for (final packageId in availablePackages) {
-      if (await _purchaseService.isPackagePurchased(packageId)) {
-        purchased.add(packageId);
+    
+    try {
+      final packages = await packageService.getActivePackages();
+      
+      // Проверяем каждый пакет из API
+      for (final package in packages) {
+        // Проверяем покупку по ID из API
+        if (await _purchaseService.isPackagePurchased(package.id)) {
+          purchased.add(package.id);
+        }
+      }
+      
+      // Также проверяем старые покупки по строковым ID (для обратной совместимости)
+      final legacyPackages = ['history', 'more_questions'];
+      for (final legacyId in legacyPackages) {
+        if (await _purchaseService.isPackagePurchased(legacyId)) {
+          // Проверяем, не добавлен ли уже этот пакет
+          if (!purchased.contains(legacyId)) {
+            purchased.add(legacyId);
+          }
+        }
+      }
+    } catch (e) {
+      print('Ошибка получения пакетов из API, используем fallback: $e');
+      // Fallback на старый способ при ошибке API
+      final availablePackages = ['history', 'more_questions'];
+      for (final packageId in availablePackages) {
+        if (await _purchaseService.isPackagePurchased(packageId)) {
+          purchased.add(packageId);
+        }
       }
     }
 

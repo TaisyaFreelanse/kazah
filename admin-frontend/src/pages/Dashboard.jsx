@@ -42,6 +42,13 @@ const Dashboard = () => {
           <h1 className="dashboard-title">Blim Bilem - Админ Панель</h1>
           <div className="header-actions">
             <span className="user-name">Администратор: {user?.username}</span>
+            <button 
+              onClick={() => navigate('/change-password')} 
+              className="change-password-button"
+              title="Сменить пароль"
+            >
+              🔒 Сменить пароль
+            </button>
             <button onClick={handleLogout} className="logout-button">
               Выйти
             </button>

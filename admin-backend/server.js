@@ -7,6 +7,7 @@ import { initDatabase, getPool } from './db/database.js';
 import authRoutes from './routes/auth.js';
 import publicQuestionsRoutes from './routes/publicQuestions.js';
 import packagesRoutes from './routes/packages.js';
+import publicPackagesRoutes from './routes/publicPackages.js';
 import phrasesRoutes from './routes/phrases.js';
 
 dotenv.config();
@@ -41,6 +42,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/public-questions', publicQuestionsRoutes);
 app.use('/api/packages', packagesRoutes);
+app.use('/api/public/packages', publicPackagesRoutes); // Публичный endpoint для приложения
 app.use('/api/phrases', phrasesRoutes);
 
 // Health check
