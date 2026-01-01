@@ -4,11 +4,15 @@ import 'excel_parser.dart';
 import 'purchase_service.dart';
 import 'package_service.dart';
 import 'package_file_service.dart';
+import 'public_question_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:convert';
 
 class QuestionService {
   final ExcelParser _excelParser = ExcelParser();
   final PurchaseService _purchaseService = PurchaseService();
   final PackageFileService _packageFileService = PackageFileService();
+  final PublicQuestionService _publicQuestionService = PublicQuestionService();
 
   /// Загружает все доступные вопросы (базовые + купленные пакеты)
   Future<List<Question>> getQuestions({
@@ -19,15 +23,49 @@ class QuestionService {
 
     // Загружаем базовые вопросы
     print('Получен язык: "$language" (длина: ${language.length})');
-    final baseQuestionsPath = language == 'KZ'
-        ? 'assets/data/questions_kz.xlsx'
-        : 'assets/data/questions_ru.xlsx';
-
-    print('Загрузка базовых вопросов из: $baseQuestionsPath (язык: $language)');
-    final baseQuestions = await _excelParser.parseQuestions(
-      assetPath: baseQuestionsPath,
-      packageId: null, // Базовые вопросы не имеют packageId
-    );
+    
+    // Приоритет 1: Пытаемся загрузить с сервера
+    List<Question> baseQuestions = [];
+    
+    if (kIsWeb) {
+      // На веб-платформе загружаем напрямую через HTTP
+      try {
+        final bytes = await _publicQuestionService.downloadPublicQuestionsFile(language: language);
+        if (bytes != null) {
+          // Парсим байты напрямую (передаем через специальный формат)
+          print('Загрузка базовых вопросов с сервера (веб)...');
+          final base64Data = base64Encode(bytes);
+          baseQuestions = await _excelParser.parseQuestions(
+            assetPath: 'bytes:$base64Data',
+            packageId: null,
+          );
+        } else {
+          baseQuestions = await _loadBaseQuestionsFromAssets(language);
+        }
+      } catch (e) {
+        print('Ошибка загрузки базовых вопросов с сервера, используем fallback: $e');
+        baseQuestions = await _loadBaseQuestionsFromAssets(language);
+      }
+    } else {
+      // На мобильных платформах пытаемся загрузить и закэшировать
+      try {
+        final cachedPath = await _publicQuestionService.downloadAndCacheFile(language: language);
+        if (cachedPath != null) {
+          print('Загрузка базовых вопросов из кэша: $cachedPath');
+          baseQuestions = await _excelParser.parseQuestions(
+            assetPath: cachedPath,
+            packageId: null,
+          );
+        } else {
+          // Fallback на assets
+          baseQuestions = await _loadBaseQuestionsFromAssets(language);
+        }
+      } catch (e) {
+        print('Ошибка загрузки базовых вопросов, используем fallback: $e');
+        baseQuestions = await _loadBaseQuestionsFromAssets(language);
+      }
+    }
+    
     print('Загружено базовых вопросов: ${baseQuestions.length}');
     allQuestions.addAll(baseQuestions);
 
@@ -41,6 +79,19 @@ class QuestionService {
     }
 
     return allQuestions;
+  }
+
+  /// Загружает базовые вопросы из assets (fallback)
+  Future<List<Question>> _loadBaseQuestionsFromAssets(String language) async {
+    final baseQuestionsPath = language == 'KZ'
+        ? 'assets/data/questions_kz.xlsx'
+        : 'assets/data/questions_ru.xlsx';
+
+    print('Загрузка базовых вопросов из assets: $baseQuestionsPath');
+    return await _excelParser.parseQuestions(
+      assetPath: baseQuestionsPath,
+      packageId: null, // Базовые вопросы не имеют packageId
+    );
   }
 
   /// Загружает вопросы из конкретного пакета

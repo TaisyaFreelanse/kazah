@@ -1,6 +1,8 @@
 import 'package:excel/excel.dart';
 import 'dart:typed_data';
-import 'dart:io';
+import 'dart:convert';
+import 'dart:io' if (dart.library.html) 'dart:html' as io;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import '../models/question.dart';
 
@@ -21,17 +23,37 @@ class ExcelParser {
       
       Uint8List bytes;
       
-      // Проверяем, является ли путь локальным файлом
-      final file = File(assetPath);
-      if (await file.exists()) {
-        // Загружаем из локального файла
-        print('Загрузка из локального файла: $assetPath');
-        bytes = await file.readAsBytes();
-      } else {
-        // Загружаем из assets
-        print('Загрузка из assets: $assetPath');
+      // Проверяем, переданы ли байты напрямую (для веб-платформы)
+      if (assetPath.startsWith('bytes:')) {
+        // Байты переданы напрямую (для веб-платформы)
+        final base64Data = assetPath.substring(6); // Убираем префикс 'bytes:'
+        bytes = Uint8List.fromList(base64Decode(base64Data));
+        print('Парсинг из переданных байтов (размер: ${bytes.length} байт)');
+      } else if (kIsWeb) {
+        // На веб-платформе всегда загружаем из assets
+        print('Загрузка из assets (веб-платформа): $assetPath');
         final ByteData data = await rootBundle.load(assetPath);
         bytes = data.buffer.asUint8List();
+      } else {
+        // На мобильных платформах проверяем, является ли путь локальным файлом
+        try {
+          final file = io.File(assetPath);
+          if (await file.exists()) {
+            // Загружаем из локального файла
+            print('Загрузка из локального файла: $assetPath');
+            bytes = await file.readAsBytes();
+          } else {
+            // Загружаем из assets
+            print('Загрузка из assets: $assetPath');
+            final ByteData data = await rootBundle.load(assetPath);
+            bytes = data.buffer.asUint8List();
+          }
+        } catch (e) {
+          // Если File API недоступен, загружаем из assets
+          print('File API недоступен, загрузка из assets: $assetPath');
+          final ByteData data = await rootBundle.load(assetPath);
+          bytes = data.buffer.asUint8List();
+        }
       }
       
       print('Файл загружен, размер: ${bytes.length} байт');
