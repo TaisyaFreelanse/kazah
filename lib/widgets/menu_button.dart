@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class MenuButton extends StatelessWidget {
   final String text;
@@ -39,7 +40,7 @@ class MenuButton extends StatelessWidget {
         ),
         child: Text(
           text,
-          style: const TextStyle(
+          style: GoogleFonts.nunito(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             shadows: [

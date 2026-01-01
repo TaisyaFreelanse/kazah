@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/language_provider.dart';
 import '../providers/game_provider.dart';
 import '../services/excel_parser.dart';
@@ -76,12 +77,20 @@ class _ResultScreenState extends State<ResultScreen> {
     final currentLanguage = languageProvider.currentLanguage;
 
     return Scaffold(
+      backgroundColor: AppColors.darkBackground,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AppColors.gradientStart, AppColors.gradientEnd],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.splashTop,
+              AppColors.splashMiddle,
+              AppColors.splashMiddle2,
+              AppColors.splashBottom,
+              AppColors.splashAccent,
+            ],
+            stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
           ),
         ),
         child: SafeArea(
@@ -90,33 +99,81 @@ class _ResultScreenState extends State<ResultScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Золотой кубок/медаль
-                const Icon(
-                  Icons.emoji_events,
-                  size: 120,
-                  color: Colors.amber,
+                // Золотой кубок/медаль с анимацией и свечением
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.glowPurple,
+                        AppColors.darkPrimary,
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.timerWarning.withOpacity(0.6),
+                        blurRadius: 30,
+                        spreadRadius: 10,
+                      ),
+                      BoxShadow(
+                        color: AppColors.glowPurple.withOpacity(0.4),
+                        blurRadius: 50,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.emoji_events,
+                    size: 90,
+                    color: AppColors.timerWarning,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 
                 // Мотивирующая фраза
                 if (_isLoading)
-                  const CircularProgressIndicator()
+                  const CircularProgressIndicator(
+                    color: AppColors.textPrimary,
+                  )
                 else
-                  Text(
-                    _motivationalPhrase,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black26,
-                          offset: Offset(0, 2),
-                          blurRadius: 4,
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.cardBackground,
+                          AppColors.cardBackground.withOpacity(0.8),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppColors.cardBorder,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.glowPurple.withOpacity(0.3),
+                          blurRadius: 20,
+                          spreadRadius: 2,
                         ),
                       ],
                     ),
-                    textAlign: TextAlign.center,
+                    child: Text(
+                      _motivationalPhrase,
+                      style: GoogleFonts.nunito(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                        height: 1.5,
+                        letterSpacing: 0.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 const SizedBox(height: 60),
                 
@@ -141,7 +198,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 // Кнопка "В главное меню"
                 MenuButton(
                   text: AppStrings.getString(AppStrings.mainMenu, currentLanguage),
-                  color: AppColors.exitButton,
+                  color: AppColors.additionalQuestionsButton,
                   onPressed: () {
                     // Сбрасываем состояние игры
                     final gameProvider = Provider.of<GameProvider>(context, listen: false);
@@ -162,4 +219,3 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 }
-

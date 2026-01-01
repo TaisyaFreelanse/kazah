@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/language_provider.dart';
 import '../providers/game_provider.dart';
 import '../constants/strings.dart';
@@ -42,7 +43,7 @@ class TimeoutScreen extends StatelessWidget {
                 // Сообщение
                 Text(
                   AppStrings.getString(AppStrings.timeoutMessage, currentLanguage),
-                  style: const TextStyle(
+                  style: GoogleFonts.nunito(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui';
 import '../providers/game_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/timer_service.dart';
 import '../services/question_service.dart';
-import '../services/package_service.dart';
-import '../widgets/timer_widget.dart';
 import '../widgets/answer_button.dart';
 import '../widgets/package_badge.dart';
+import '../services/package_service.dart';
 import '../constants/colors.dart';
 import '../models/question.dart';
 import 'result_screen.dart';
@@ -138,14 +139,6 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  void _handleTimeout() {
-    _timerService?.stop();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const TimeoutScreen()),
-    );
-  }
-
   /// Загружает цвета пакетов из API
   Future<void> _loadPackageColors() async {
     try {
@@ -186,6 +179,14 @@ class _GameScreenState extends State<GameScreen> {
     return _packageColors[packageId] ?? Colors.grey;
   }
 
+  void _handleTimeout() {
+    _timerService?.stop();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const TimeoutScreen()),
+    );
+  }
+
   Widget _buildHintButton({
     required IconData icon,
     required String label,
@@ -194,18 +195,67 @@ class _GameScreenState extends State<GameScreen> {
   }) {
     return Column(
       children: [
-        IconButton(
-          onPressed: onPressed,
-          icon: Icon(icon),
-          iconSize: 32,
-          color: isUsed ? Colors.grey : Colors.blue,
-          tooltip: label,
+        Container(
+          decoration: BoxDecoration(
+            gradient: isUsed
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.questionCardBackground,
+                      AppColors.questionCardBackgroundLight,
+                    ],
+                  )
+                : LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.darkPrimary,
+                      AppColors.darkPrimary.withOpacity(0.7),
+                    ],
+                  ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isUsed 
+                  ? AppColors.cardBorder.withOpacity(0.3)
+                  : AppColors.cardBorder,
+              width: 2,
+            ),
+            boxShadow: isUsed
+                ? [
+                    BoxShadow(
+                      color: AppColors.questionCardBackground.withOpacity(0.3),
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: AppColors.glowPurple.withOpacity(0.3),
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                    ),
+                  ],
+          ),
+          child: IconButton(
+            onPressed: onPressed,
+            icon: Icon(icon),
+            iconSize: 32,
+            color: isUsed 
+                ? AppColors.textSecondary 
+                : AppColors.cardBackground,
+            tooltip: label,
+          ),
         ),
+        const SizedBox(height: 6),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 10,
-            color: isUsed ? Colors.grey : Colors.black87,
+          style: GoogleFonts.nunito(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: isUsed 
+                ? AppColors.textSecondary 
+                : AppColors.cardBackground,
           ),
         ),
       ],
@@ -233,9 +283,6 @@ class _GameScreenState extends State<GameScreen> {
     });
     
     _timerService?.stop();
-    
-    // Проверяем правильность ответа
-    final isCorrect = answerIndex == currentQuestion.correctAnswerIndex;
     
     // Небольшая задержка перед переходом
     Future.delayed(const Duration(milliseconds: 500), () {
@@ -316,7 +363,6 @@ class _GameScreenState extends State<GameScreen> {
     final currentQuestion = gameProvider.currentQuestion;
     if (currentQuestion == null) return;
     
-    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
     final questionService = QuestionService();
     
     // Получаем альтернативный вопрос
@@ -375,95 +421,324 @@ class _GameScreenState extends State<GameScreen> {
           );
         }
 
+        final languageProvider = Provider.of<LanguageProvider>(context);
+        final questionNumber = gameProvider.currentQuestionIndex + 1;
+        final totalQuestions = gameProvider.questions.length;
+        final progress = questionNumber / totalQuestions;
+        
+        // Определяем название категории
+        String categoryName = currentQuestion.packageId != null
+            ? 'Пакет'
+            : (languageProvider.currentLanguage == 'KZ' ? 'Негізгі' : 'Базовые');
+        
         return Scaffold(
-          body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                children: [
-                  // Таймер сверху
-                  Center(
-                    child: TimerWidget(secondsRemaining: _secondsRemaining),
+          backgroundColor: AppColors.gameBackgroundTop,
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.splashTop,
+                  AppColors.splashMiddle,
+                  AppColors.splashMiddle2,
+                  AppColors.splashBottom,
+                  AppColors.splashAccent,
+                  AppColors.cardBackground,
+                ],
+                stops: const [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Декоративные элементы фона
+                Positioned(
+                  top: -60,
+                  right: -60,
+                  child: Container(
+                    width: 250,
+                    height: 250,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          AppColors.splashAccent.withOpacity(0.3),
+                          AppColors.splashMiddle.withOpacity(0.15),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.5, 1.0],
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  
-                  // Кнопки подсказок
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildHintButton(
-                        icon: Icons.check_circle_outline,
-                        label: 'Проверка',
-                        onPressed: _hint1Used ? null : _activateHint1,
-                        isUsed: _hint1Used,
+                ),
+                Positioned(
+                  bottom: -80,
+                  left: -80,
+                  child: Container(
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          AppColors.splashBottom.withOpacity(0.25),
+                          Colors.transparent,
+                        ],
                       ),
-                      _buildHintButton(
-                        icon: Icons.hide_source,
-                        label: '50/50',
-                        onPressed: _hint2Used ? null : _activateHint2,
-                        isUsed: _hint2Used,
-                      ),
-                      _buildHintButton(
-                        icon: Icons.swap_horiz,
-                        label: 'Замена',
-                        onPressed: _hint3Used ? null : _activateHint3,
-                        isUsed: _hint3Used,
-                      ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  
-                  // Значок пакета (если вопрос из пакета) и текст вопроса
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                SafeArea(
+                  child: Column(
                     children: [
-                      if (currentQuestion.packageId != null) ...[
-                        PackageBadge(
-                          color: _getPackageColor(currentQuestion.packageId),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
+                // Навигационная панель
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: AppColors.cardBackground),
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                      ),
                       Expanded(
                         child: Text(
-                          currentQuestion.text,
-                          style: const TextStyle(
-                            fontSize: 24,
+                          categoryName,
+                          style: GoogleFonts.nunito(
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: AppColors.cardBackground,
                           ),
                           textAlign: TextAlign.center,
                         ),
                       ),
+                      const SizedBox(width: 48), // Для баланса
                     ],
                   ),
-                  const SizedBox(height: 32),
-                  
-                  // 6 кнопок ответов
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: currentQuestion.answers.length,
-                      itemBuilder: (context, index) {
-                        if (_hiddenAnswerIndices.contains(index)) {
-                          return const SizedBox.shrink();
-                        }
+                ),
+                
+                // Progress bar с эффектом свечения
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.glowCyan.withOpacity(0.3),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: AppColors.progressBackground,
+                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.progressFill),
+                        minHeight: 8,
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Номер вопроса и таймер
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        languageProvider.currentLanguage == 'KZ'
+                            ? 'Сұрақ $questionNumber / $totalQuestions'
+                            : 'Вопрос $questionNumber из $totalQuestions',
+                        style: GoogleFonts.nunito(
+                          fontSize: 14,
+                          color: AppColors.cardBackground,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.timer,
+                            size: 18,
+                            color: AppColors.cardBackground,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '00:${_secondsRemaining.toString().padLeft(2, '0')}',
+                            style: GoogleFonts.nunito(
+                              fontSize: 14,
+                              color: AppColors.cardBackground,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Карточка с вопросом
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      children: [
+                        // Значок пакета (если вопрос из пакета)
+                        if (currentQuestion.packageId != null) ...[
+                          PackageBadge(
+                            color: _getPackageColor(currentQuestion.packageId),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                         
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: AnswerButton(
+                        // Текст вопроса с эффектом стекла
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground.withOpacity(0.4),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 20,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                currentQuestion.text,
+                                style: GoogleFonts.nunito(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                  height: 1.5,
+                                  letterSpacing: 0.5,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Кнопки ответов
+                        ...List.generate(currentQuestion.answers.length, (index) {
+                          if (_hiddenAnswerIndices.contains(index)) {
+                            return const SizedBox.shrink();
+                          }
+                          
+                          final labels = ['A', 'B', 'C', 'D', 'E', 'F'];
+                          
+                          return AnswerButton(
                             text: currentQuestion.answers[index],
+                            label: labels[index],
                             isSelected: _selectedAnswerIndex == index && !_isHint1Active,
                             state: _answerStates[index] ?? AnswerButtonState.normal,
                             onPressed: _isHint1Active || _selectedAnswerIndex == -1
                                 ? () => _handleAnswerSelected(index)
                                 : null,
+                          );
+                        }),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Кнопки подсказок
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildHintButton(
+                              icon: Icons.check_circle_outline,
+                              label: languageProvider.currentLanguage == 'KZ' ? 'Тексеру' : 'Проверка',
+                              onPressed: _hint1Used ? null : _activateHint1,
+                              isUsed: _hint1Used,
+                            ),
+                            _buildHintButton(
+                              icon: Icons.hide_source,
+                              label: '50/50',
+                              onPressed: _hint2Used ? null : _activateHint2,
+                              isUsed: _hint2Used,
+                            ),
+                            _buildHintButton(
+                              icon: Icons.swap_horiz,
+                              label: languageProvider.currentLanguage == 'KZ' ? 'Ауыстыру' : 'Замена',
+                              onPressed: _hint3Used ? null : _activateHint3,
+                              isUsed: _hint3Used,
+                            ),
+                          ],
+                        ),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Кнопка Check с эффектом свечения
+                        if (_selectedAnswerIndex != -1 && !_isHint1Active)
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.startButton.withOpacity(0.5),
+                                  blurRadius: 20,
+                                  spreadRadius: 5,
+                                ),
+                                BoxShadow(
+                                  color: AppColors.glowPink.withOpacity(0.3),
+                                  blurRadius: 30,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  _handleAnswerSelected(_selectedAnswerIndex);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.startButton,
+                                  foregroundColor: AppColors.textPrimary,
+                                  padding: const EdgeInsets.symmetric(vertical: 20),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: Text(
+                                  languageProvider.currentLanguage == 'KZ' ? 'Тексеру' : 'Check',
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                        );
-                      },
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         );

@@ -1,10 +1,13 @@
 import 'package:excel/excel.dart';
 import 'dart:typed_data';
 import 'dart:convert';
-import 'dart:io' if (dart.library.html) 'dart:html' as io;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import '../models/question.dart';
+
+// Условный импорт для File API (только на мобильных платформах)
+// На веб-платформе используется stub, так как File API недоступен
+import 'dart:io' if (dart.library.html) 'dart_io_stub.dart' as io;
 
 class ExcelParser {
   /// Парсит вопросы из Excel файла
@@ -36,23 +39,34 @@ class ExcelParser {
         bytes = data.buffer.asUint8List();
       } else {
         // На мобильных платформах проверяем, является ли путь локальным файлом
-        try {
-          final file = io.File(assetPath);
-          if (await file.exists()) {
-            // Загружаем из локального файла
-            print('Загрузка из локального файла: $assetPath');
-            bytes = await file.readAsBytes();
-          } else {
-            // Загружаем из assets
-            print('Загрузка из assets: $assetPath');
+        // На веб-платформе File API недоступен, всегда используем assets
+        if (kIsWeb) {
+          // На веб-платформе всегда загружаем из assets
+          print('Загрузка из assets (веб-платформа): $assetPath');
+          final ByteData data = await rootBundle.load(assetPath);
+          bytes = data.buffer.asUint8List();
+        } else {
+          // На мобильных платформах проверяем локальный файл
+          try {
+            // ignore: avoid_dynamic_calls
+            final file = io.File(assetPath);
+            if (await file.exists()) {
+              // Загружаем из локального файла
+              print('Загрузка из локального файла: $assetPath');
+              final fileBytes = await file.readAsBytes();
+              bytes = Uint8List.fromList(fileBytes);
+            } else {
+              // Загружаем из assets
+              print('Загрузка из assets: $assetPath');
+              final ByteData data = await rootBundle.load(assetPath);
+              bytes = data.buffer.asUint8List();
+            }
+          } catch (e) {
+            // Если File API недоступен, загружаем из assets
+            print('File API недоступен, загрузка из assets: $assetPath');
             final ByteData data = await rootBundle.load(assetPath);
             bytes = data.buffer.asUint8List();
           }
-        } catch (e) {
-          // Если File API недоступен, загружаем из assets
-          print('File API недоступен, загрузка из assets: $assetPath');
-          final ByteData data = await rootBundle.load(assetPath);
-          bytes = data.buffer.asUint8List();
         }
       }
       

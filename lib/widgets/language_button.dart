@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../constants/colors.dart';
 
 class LanguageButton extends StatelessWidget {
@@ -15,49 +16,44 @@ class LanguageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = language == 'KZ' ? AppColors.kzButton : AppColors.ruButton;
-    
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.5),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected ? AppColors.cardBorder : AppColors.cardBorder.withOpacity(0.3),
+          width: 2,
+        ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: AppColors.darkPrimary.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 18),
+          backgroundColor: isSelected 
+              ? AppColors.questionCardBackground 
+              : AppColors.questionCardBackground.withOpacity(0.7),
+          foregroundColor: AppColors.textPrimary,
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
-          elevation: isSelected ? 12 : 8,
-          shadowColor: color.withOpacity(0.5),
+          elevation: isSelected ? 4 : 0,
         ),
         child: Text(
           language,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            shadows: [
-              const Shadow(
-                color: Colors.black26,
-                offset: Offset(0, 2),
-                blurRadius: 2,
-              ),
-            ],
-            decoration: isSelected ? TextDecoration.underline : null,
-            decorationThickness: 2,
+          style: GoogleFonts.nunito(
+            fontSize: 15,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
           ),
         ),
       ),
     );
   }
 }
-

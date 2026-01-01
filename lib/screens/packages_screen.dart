@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui';
 import '../providers/language_provider.dart';
 import '../models/package_info.dart';
 import '../services/purchase_service.dart';
 import '../services/package_service.dart';
 import '../constants/colors.dart';
 import '../constants/strings.dart';
-import '../widgets/package_badge.dart';
 
 class PackagesScreen extends StatefulWidget {
   const PackagesScreen({super.key});
@@ -15,11 +16,38 @@ class PackagesScreen extends StatefulWidget {
   State<PackagesScreen> createState() => _PackagesScreenState();
 }
 
-class _PackagesScreenState extends State<PackagesScreen> {
+class _PackagesScreenState extends State<PackagesScreen>
+    with SingleTickerProviderStateMixin {
   final PurchaseService _purchaseService = PurchaseService();
   final PackageService _packageService = PackageService();
   List<PackageInfo> _packages = [];
   bool _isLoading = true;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeIn,
+      ),
+    );
+    _loadPackages();
+    _setupPurchaseListener();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _purchaseService.dispose();
+    super.dispose();
+  }
 
   Future<void> _loadPackages() async {
     setState(() {
@@ -48,6 +76,8 @@ class _PackagesScreenState extends State<PackagesScreen> {
         _packages = packagesWithPurchaseStatus;
         _isLoading = false;
       });
+      
+      _animationController.forward();
     } catch (e) {
       print('Ошибка загрузки пакетов: $e');
       // Fallback на пакеты по умолчанию
@@ -62,6 +92,7 @@ class _PackagesScreenState extends State<PackagesScreen> {
             nameRu: AppStrings.moreQuestions['RU']!,
             color: AppColors.packageMoreQuestions,
             isPurchased: moreQuestionsPurchased,
+            price: 1000,
           ),
           PackageInfo(
             id: 'history',
@@ -69,18 +100,14 @@ class _PackagesScreenState extends State<PackagesScreen> {
             nameRu: AppStrings.history['RU']!,
             color: AppColors.packageHistory,
             isPurchased: historyPurchased,
+            price: 1000,
           ),
         ];
         _isLoading = false;
       });
+      
+      _animationController.forward();
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPackages();
-    _setupPurchaseListener();
   }
 
   void _setupPurchaseListener() {
@@ -103,7 +130,11 @@ class _PackagesScreenState extends State<PackagesScreen> {
                   ? 'Пакет сатып алынды!'
                   : 'Пакет куплен!',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.correctAnswer,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       } else if (error != null) {
@@ -111,17 +142,15 @@ class _PackagesScreenState extends State<PackagesScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(error),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.wrongAnswer,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
     };
-  }
-
-  @override
-  void dispose() {
-    _purchaseService.dispose();
-    super.dispose();
   }
 
   Future<void> _handlePurchase(String packageId) async {
@@ -143,8 +172,13 @@ class _PackagesScreenState extends State<PackagesScreen> {
         SnackBar(
           content: Text(
             currentLanguage == 'KZ'
-                ? 'Покупки восстанавливаются...'
+                ? 'Покупкаларды қалпына келтіру...'
                 : 'Восстановление покупок...',
+          ),
+          backgroundColor: AppColors.darkCard,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       );
@@ -157,20 +191,29 @@ class _PackagesScreenState extends State<PackagesScreen> {
     final currentLanguage = languageProvider.currentLanguage;
 
     return Scaffold(
+      backgroundColor: AppColors.darkBackground,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AppColors.gradientStart, AppColors.gradientEnd],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.splashTop,
+              AppColors.splashMiddle,
+              AppColors.splashMiddle2,
+              AppColors.splashBottom,
+              AppColors.splashAccent,
+              AppColors.cardBackground,
+            ],
+            stops: const [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Заголовок
+              // Заголовок с улучшенным дизайном
               Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
                 child: Row(
                   children: [
                     IconButton(
@@ -186,17 +229,11 @@ class _PackagesScreenState extends State<PackagesScreen> {
                           AppStrings.additionalQuestions,
                           currentLanguage,
                         ),
-                        style: const TextStyle(
-                          fontSize: 24,
+                        style: GoogleFonts.nunito(
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black26,
-                              offset: Offset(0, 2),
-                              blurRadius: 4,
-                            ),
-                          ],
+                          color: AppColors.cardBackground,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
@@ -207,38 +244,59 @@ class _PackagesScreenState extends State<PackagesScreen> {
               // Список пакетов
               Expanded(
                 child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : Column(
-                        children: [
-                          Expanded(
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.textPrimary,
+                        ),
+                      )
+                    : _packages.isEmpty
+                        ? Center(
+                            child: Text(
+                              currentLanguage == 'KZ'
+                                  ? 'Пакеттер жоқ'
+                                  : 'Пакеты недоступны',
+                              style: GoogleFonts.nunito(
+                                fontSize: 18,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          )
+                        : FadeTransition(
+                            opacity: _fadeAnimation,
                             child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20.0,
+                                vertical: 8.0,
+                              ),
                               itemCount: _packages.length,
                               itemBuilder: (context, index) {
                                 final package = _packages[index];
-                                return _buildPackageCard(package, currentLanguage);
+                                return _buildPackageCard(package, currentLanguage, index);
                               },
                             ),
                           ),
-                          // Кнопка восстановления покупок
-                          Padding(
-                            padding: const EdgeInsets.all(24.0),
-                            child: TextButton(
-                              onPressed: _handleRestorePurchases,
-                              child: Text(
-                                currentLanguage == 'KZ'
-                                    ? 'Покупкаларды қалпына келтіру'
-                                    : 'Восстановить покупки',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+              ),
+              
+              // Кнопка восстановления покупок
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: TextButton(
+                    onPressed: _handleRestorePurchases,
+                    child: Text(
+                      currentLanguage == 'KZ'
+                          ? 'Покупкаларды қалпына келтіру'
+                          : 'Восстановить покупки',
+                      style: GoogleFonts.nunito(
+                        fontSize: 16,
+                        color: AppColors.textSecondary,
+                        decoration: TextDecoration.underline,
+                        decorationColor: AppColors.textSecondary,
                       ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -247,81 +305,190 @@ class _PackagesScreenState extends State<PackagesScreen> {
     );
   }
 
-  Widget _buildPackageCard(PackageInfo package, String language) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 8,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+  Widget _buildPackageCard(PackageInfo package, String language, int index) {
+    final isPurchased = package.isPurchased;
+    
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground.withOpacity(0.4),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isPurchased
+                  ? AppColors.correctAnswer.withOpacity(0.5)
+                  : AppColors.cardBorder.withOpacity(0.5),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: package.color.withOpacity(0.3),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(24.0),
         child: Row(
           children: [
-            // Цветовой значок пакета
-            PackageBadge(color: package.color),
-            const SizedBox(width: 16),
+            // Большой цветовой значок пакета
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [
+                    package.color,
+                    package.color.withOpacity(0.6),
+                  ],
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: package.color.withOpacity(0.5),
+                    blurRadius: 15,
+                    spreadRadius: 3,
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.quiz,
+                color: AppColors.textPrimary,
+                size: 32,
+              ),
+            ),
+            const SizedBox(width: 20),
             
-            // Название пакета
+            // Название и информация о пакете
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     package.getName(language),
-                    style: const TextStyle(
-                      fontSize: 20,
+                    style: GoogleFonts.nunito(
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
+                      color: isPurchased
+                          ? AppColors.textPrimary
+                          : AppColors.textPrimary.withOpacity(0.9),
+                      letterSpacing: 0.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    package.isPurchased
-                        ? AppStrings.getString(AppStrings.purchased, language)
-                        : '',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: package.isPurchased ? Colors.green : Colors.grey,
-                      fontWeight: FontWeight.w500,
+                  const SizedBox(height: 8),
+                  if (package.price != null && !isPurchased) ...[
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.attach_money,
+                          size: 18,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${package.price} ₸',
+                          style: GoogleFonts.nunito(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                  ] else if (isPurchased) ...[
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          size: 18,
+                          color: AppColors.correctAnswer,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          AppStrings.getString(AppStrings.purchased, language),
+                          style: GoogleFonts.nunito(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.correctAnswer,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
             
+            const SizedBox(width: 16),
+            
             // Кнопка покупки/статус
-            if (package.isPurchased)
-              const Icon(
-                Icons.check_circle,
-                color: Colors.green,
-                size: 32,
-              )
-            else
-              ElevatedButton(
-                onPressed: () => _handlePurchase(package.id),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: package.color,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            if (isPurchased)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.correctAnswer.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.correctAnswer,
+                    width: 2,
                   ),
                 ),
-                child: Text(
-                  AppStrings.getString(AppStrings.buy, language),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                child: const Icon(
+                  Icons.check_circle,
+                  color: AppColors.correctAnswer,
+                  size: 28,
+                ),
+              )
+            else
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: package.color.withOpacity(0.5),
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ElevatedButton(
+                  onPressed: () => _handlePurchase(package.id),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: package.color,
+                    foregroundColor: AppColors.textPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    AppStrings.getString(AppStrings.buy, language),
+                    style: GoogleFonts.nunito(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
               ),
           ],
         ),
       ),
+        ),
+      ),
     );
   }
 }
-

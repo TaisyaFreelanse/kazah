@@ -16,12 +16,18 @@ class BlimBilemApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => GameProvider()),
       ],
       child: MaterialApp(
-        title: 'Blim Bilem',
+        title: 'Bilim Bilem',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          colorScheme: ColorScheme.dark(
+            primary: const Color(0xFF533483),
+            secondary: const Color(0xFFE94560),
+            surface: const Color(0xFF16213E),
+            background: const Color(0xFF1A1A2E),
+          ),
           useMaterial3: true,
-          textTheme: GoogleFonts.robotoTextTheme(),
+          textTheme: GoogleFonts.nunitoTextTheme(),
+          scaffoldBackgroundColor: const Color(0xFF1A1A2E),
         ),
         home: const MainMenuScreen(),
       ),

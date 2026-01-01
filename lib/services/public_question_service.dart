@@ -1,11 +1,12 @@
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 // Условный импорт для File API (только на мобильных платформах)
-import 'dart:io' if (dart.library.html) 'dart:html' as io;
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+// На веб-платформе используется stub, так как File API недоступен
+import 'dart:io' if (dart.library.html) 'dart_io_stub.dart' as io;
 
 class PublicQuestionService {
   // URL бекенда
@@ -49,13 +50,23 @@ class PublicQuestionService {
       return null;
     }
 
+    // Этот код выполняется только на мобильных платформах (kIsWeb уже проверен выше)
     try {
       final bytes = await downloadPublicQuestionsFile(language: language);
       if (bytes == null) return null;
 
-      // Сохраняем в кэш
-      final cacheDir = await _getCacheDirectory();
+      // Сохраняем в кэш (только на мобильных платформах)
+      final appDir = await getApplicationDocumentsDirectory();
+      // На мобильных платформах io - это dart:io
+      // ignore: avoid_dynamic_calls
+      final cacheDir = io.Directory(path.join(appDir.path, 'public_questions'));
+      
+      if (!await cacheDir.exists()) {
+        await cacheDir.create(recursive: true);
+      }
+      
       final fileName = 'public_questions_$language.xlsx';
+      // ignore: avoid_dynamic_calls
       final file = io.File(path.join(cacheDir.path, fileName));
       
       await file.writeAsBytes(bytes);
@@ -65,18 +76,6 @@ class PublicQuestionService {
       print('Ошибка сохранения файла в кэш: $e');
       return null;
     }
-  }
-
-  /// Получает директорию для кэша
-  Future<io.Directory> _getCacheDirectory() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final cacheDir = io.Directory(path.join(appDir.path, 'public_questions'));
-    
-    if (!await cacheDir.exists()) {
-      await cacheDir.create(recursive: true);
-    }
-    
-    return cacheDir;
   }
 }
 

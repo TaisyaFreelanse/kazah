@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../constants/colors.dart';
 
 class TimerWidget extends StatelessWidget {
@@ -28,27 +29,19 @@ class TimerWidget extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: timerColor.withOpacity(0.5),
-            blurRadius: 8,
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Text(
-        '$secondsRemaining',
-        style: const TextStyle(
-          fontSize: 36,
+        '00:${secondsRemaining.toString().padLeft(2, '0')}',
+        style: GoogleFonts.nunito(
+          fontSize: 24,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
-          shadows: [
-            Shadow(
-              color: Colors.black26,
-              offset: Offset(0, 2),
-              blurRadius: 2,
-            ),
-          ],
+          color: AppColors.textPrimary,
         ),
       ),
     );
   }
 }
-
