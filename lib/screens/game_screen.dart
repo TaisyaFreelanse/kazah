@@ -210,15 +210,15 @@ class _GameScreenState extends State<GameScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppColors.darkPrimary,
-                      AppColors.darkPrimary.withOpacity(0.7),
+                      Colors.white,
+                      Colors.white.withOpacity(0.9),
                     ],
                   ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isUsed 
                   ? AppColors.cardBorder.withOpacity(0.3)
-                  : AppColors.cardBorder,
+                  : Colors.white,
               width: 2,
             ),
             boxShadow: isUsed
@@ -611,7 +611,7 @@ class _GameScreenState extends State<GameScreen> {
                                 color: AppColors.cardBackground.withOpacity(0.4),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.3),
+                                  color: Colors.white,
                                   width: 2,
                                 ),
                                 boxShadow: [
