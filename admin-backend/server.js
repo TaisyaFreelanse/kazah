@@ -10,6 +10,7 @@ import publicQuestionsPublicRoutes from './routes/publicQuestionsPublic.js';
 import packagesRoutes from './routes/packages.js';
 import publicPackagesRoutes from './routes/publicPackages.js';
 import phrasesRoutes from './routes/phrases.js';
+import publicPhrasesPublicRoutes from './routes/publicPhrasesPublic.js';
 
 dotenv.config();
 
@@ -46,6 +47,7 @@ app.use('/api/public/questions', publicQuestionsPublicRoutes); // Публичн
 app.use('/api/packages', packagesRoutes);
 app.use('/api/public/packages', publicPackagesRoutes); // Публичный endpoint для приложения
 app.use('/api/phrases', phrasesRoutes);
+app.use('/api/public/phrases', publicPhrasesPublicRoutes); // Публичный endpoint для финальных фраз
 
 // Health check
 app.get('/api/health', (req, res) => {
