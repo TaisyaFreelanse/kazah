@@ -9,8 +9,8 @@ class BilimBilemLogo extends StatelessWidget {
   const BilimBilemLogo({
     super.key,
     this.size = 50,
-    this.backgroundColor = AppColors.startButton, // Оранжево-розовый цвет
-    this.letterColor = AppColors.textPrimary, // Белый
+    this.backgroundColor = AppColors.startButton,
+    this.letterColor = AppColors.textPrimary,
   });
 
   @override
@@ -46,14 +46,12 @@ class BLogoPainter extends CustomPainter {
     final double width = size.width;
     final double height = size.height;
     final double strokeWidth = size.width * 0.12;
-    final double gap = strokeWidth * 0.8; // Расстояние между двойными линиями
+    final double gap = strokeWidth * 0.8;
 
-    // Вертикальная линия (левая часть буквы B)
     final double x = width * 0.25;
     final double topY = height * 0.15;
     final double bottomY = height * 0.85;
 
-    // Рисуем двойную вертикальную линию
     canvas.drawLine(
       Offset(x, topY),
       Offset(x, bottomY),
@@ -65,12 +63,10 @@ class BLogoPainter extends CustomPainter {
       paint,
     );
 
-    // Верхняя петля буквы B
     final double topLoopRadius = width * 0.2;
     final double topLoopCenterX = x + topLoopRadius;
     final double topLoopCenterY = height * 0.35;
 
-    // Верхняя дуга (внешняя)
     final topArc1 = Path()
       ..moveTo(x, topY)
       ..arcTo(
@@ -78,13 +74,12 @@ class BLogoPainter extends CustomPainter {
           center: Offset(topLoopCenterX, topLoopCenterY),
           radius: topLoopRadius,
         ),
-        -1.57, // -90 градусов
-        3.14, // 180 градусов
+        -1.57,
+        3.14,
         false,
       );
     canvas.drawPath(topArc1, paint);
 
-    // Верхняя дуга (внутренняя)
     final topArc2 = Path()
       ..moveTo(x + gap, topY)
       ..arcTo(
@@ -98,12 +93,10 @@ class BLogoPainter extends CustomPainter {
       );
     canvas.drawPath(topArc2, paint);
 
-    // Нижняя петля буквы B
     final double bottomLoopRadius = width * 0.25;
     final double bottomLoopCenterX = x + bottomLoopRadius;
     final double bottomLoopCenterY = height * 0.65;
 
-    // Нижняя дуга (внешняя)
     final bottomArc1 = Path()
       ..moveTo(x, height * 0.5)
       ..arcTo(
@@ -117,7 +110,6 @@ class BLogoPainter extends CustomPainter {
       );
     canvas.drawPath(bottomArc1, paint);
 
-    // Нижняя дуга (внутренняя)
     final bottomArc2 = Path()
       ..moveTo(x + gap, height * 0.5)
       ..arcTo(

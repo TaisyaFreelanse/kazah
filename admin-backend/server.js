@@ -20,15 +20,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Статическая раздача загруженных файлов
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Подключение к PostgreSQL
 (async () => {
   try {
     await initDatabase();
@@ -40,21 +37,18 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
   }
 })();
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/public-questions', publicQuestionsRoutes);
-app.use('/api/public/questions', publicQuestionsPublicRoutes); // Публичный endpoint для базовых вопросов
+app.use('/api/public/questions', publicQuestionsPublicRoutes);
 app.use('/api/packages', packagesRoutes);
-app.use('/api/public/packages', publicPackagesRoutes); // Публичный endpoint для приложения
+app.use('/api/public/packages', publicPackagesRoutes);
 app.use('/api/phrases', phrasesRoutes);
-app.use('/api/public/phrases', publicPhrasesPublicRoutes); // Публичный endpoint для финальных фраз
+app.use('/api/public/phrases', publicPhrasesPublicRoutes);
 
-// Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Blim Bilem Admin API is running' });
+  res.json({ status: 'ok', message: 'Blim Bilem Admin API is running'   });
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ 

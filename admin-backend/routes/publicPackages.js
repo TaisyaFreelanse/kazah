@@ -9,13 +9,10 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// Публичный endpoint для получения активных пакетов (для Android приложения)
-// Не требует авторизации
 router.get('/', async (req, res) => {
   try {
     const packages = await Package.findActive();
     
-    // Форматируем данные для приложения (убираем внутренние поля)
     const formattedPackages = packages.map(pkg => ({
       id: pkg.id,
       name: pkg.name,
@@ -36,7 +33,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Получить один активный пакет по ID (для проверки доступности)
 router.get('/:id', async (req, res) => {
   try {
     const packageItem = await Package.findById(req.params.id);
@@ -45,12 +41,10 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Пакет не найден' });
     }
 
-    // Возвращаем пакет только если он активен
     if (!packageItem.is_active && !packageItem.isActive) {
       return res.status(404).json({ error: 'Пакет не доступен' });
     }
 
-    // Форматируем данные для приложения
     const formattedPackage = {
       id: packageItem.id,
       name: packageItem.name,
@@ -71,7 +65,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Скачать файл пакета (публичный endpoint для приложения)
 router.get('/:id/files/:language', async (req, res) => {
   try {
     const { id, language } = req.params;
@@ -86,7 +79,6 @@ router.get('/:id/files/:language', async (req, res) => {
       return res.status(404).json({ error: 'Пакет не найден' });
     }
 
-    // Возвращаем файл только если пакет активен
     if (!packageItem.is_active && !packageItem.isActive) {
       return res.status(404).json({ error: 'Пакет не доступен' });
     }
@@ -97,17 +89,14 @@ router.get('/:id/files/:language', async (req, res) => {
       return res.status(404).json({ error: `Файл на ${language === 'KZ' ? 'казахском' : 'русском'} языке не найден` });
     }
 
-    // Путь к файлу на сервере
     const filePath = path.join(__dirname, '..', fileInfo.file_url);
     
-    // Проверяем существование файла
     try {
       await fs.access(filePath);
     } catch (err) {
       return res.status(404).json({ error: 'Файл не найден на сервере' });
     }
 
-    // Отправляем файл
     res.download(filePath, fileInfo.file_name || `package_${id}_${language}.xlsx`, (err) => {
       if (err) {
         console.error('Ошибка отправки файла:', err);

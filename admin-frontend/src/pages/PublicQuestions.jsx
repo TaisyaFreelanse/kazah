@@ -39,7 +39,6 @@ const PublicQuestions = () => {
   const handleFileUpload = async (language, file) => {
     if (!file) return;
 
-    // Проверка типа файла
     const validTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-excel',
@@ -50,7 +49,6 @@ const PublicQuestions = () => {
       return;
     }
 
-    // Проверка размера (10MB)
     if (file.size > 10 * 1024 * 1024) {
       setError({ ...error, [language]: 'Размер файла не должен превышать 10MB' });
       return;

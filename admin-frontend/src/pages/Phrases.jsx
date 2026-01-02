@@ -39,7 +39,6 @@ const Phrases = () => {
   const handleFileUpload = async (language, file) => {
     if (!file) return;
 
-    // Проверка типа файла
     const validTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-excel',
@@ -50,7 +49,6 @@ const Phrases = () => {
       return;
     }
 
-    // Проверка размера (5MB для фраз)
     if (file.size > 5 * 1024 * 1024) {
       setError({ ...error, [language]: 'Размер файла не должен превышать 5MB' });
       return;

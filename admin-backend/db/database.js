@@ -21,7 +21,6 @@ export const initDatabase = async () => {
   const pool = getPool();
   
   try {
-    // Создаем таблицы
     await pool.query(`
       CREATE TABLE IF NOT EXISTS admins (
         id SERIAL PRIMARY KEY,

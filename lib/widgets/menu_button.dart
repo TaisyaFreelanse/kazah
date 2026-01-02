@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../utils/responsive.dart';
 
 class MenuButton extends StatelessWidget {
   final String text;
@@ -17,12 +18,12 @@ class MenuButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(Responsive.dp(context, 16)),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.5),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            blurRadius: Responsive.dp(context, 8),
+            offset: Offset(0, Responsive.dp(context, 4)),
           ),
         ],
       ),
@@ -31,27 +32,35 @@ class MenuButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+          padding: EdgeInsets.symmetric(
+            horizontal: Responsive.dp(context, 24),
+            vertical: Responsive.dp(context, 14),
           ),
-          elevation: 8,
+          minimumSize: Size(
+            double.infinity,
+            Responsive.dp(context, 48),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Responsive.dp(context, 16)),
+          ),
+          elevation: Responsive.dp(context, 8),
           shadowColor: color.withOpacity(0.5),
         ),
-        child: Text(
-          text,
-          style: GoogleFonts.nunito(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            shadows: [
-              Shadow(
-                color: Colors.black26,
-                offset: Offset(0, 2),
-                blurRadius: 2,
-              ),
-            ],
+          child: Text(
+            text,
+            style: GoogleFonts.nunito(
+              fontSize: Responsive.textSize(context, 16),
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              shadows: [
+                Shadow(
+                  color: Colors.black26,
+                  offset: Offset(0, Responsive.dp(context, 1)),
+                  blurRadius: Responsive.dp(context, 1),
+                ),
+              ],
+            ),
           ),
-        ),
       ),
     );
   }

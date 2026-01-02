@@ -69,7 +69,6 @@ const ChangePassword = () => {
           newPassword: '',
           confirmPassword: '',
         });
-        // Перенаправляем на главную страницу через 2 секунды
         setTimeout(() => {
           navigate('/');
         }, 2000);

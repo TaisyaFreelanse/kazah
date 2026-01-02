@@ -11,7 +11,6 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// Настройка multer для загрузки файлов
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../uploads/phrases');
@@ -28,7 +27,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
         file.mimetype === 'application/vnd.ms-excel') {
@@ -39,7 +38,6 @@ const upload = multer({
   },
 });
 
-// Получить информацию о загруженных файлах
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const phrases = await Phrase.findAll();
@@ -49,7 +47,6 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Загрузить Excel файл
 router.post('/upload', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -62,7 +59,6 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
       return res.status(400).json({ error: 'Язык должен быть KZ или RU' });
     }
 
-    // Удаляем старый файл для этого языка, если существует
     const oldPhrase = await Phrase.findByLanguage(language);
     if (oldPhrase && oldPhrase.file_url) {
       try {
@@ -73,7 +69,6 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
       await Phrase.deleteByLanguage(language);
     }
 
-    // Создаем новую запись
     const phrase = await Phrase.create({
       language,
       fileUrl: `/uploads/phrases/${req.file.filename}`,
@@ -94,7 +89,6 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
   }
 });
 
-// Удалить файл
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const phrase = await Phrase.findById(req.params.id);
@@ -102,7 +96,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Файл не найден' });
     }
 
-    // Удаляем физический файл
     try {
       await fs.unlink(path.join(__dirname, '..', phrase.file_url));
     } catch (err) {

@@ -1,6 +1,3 @@
-// Stub для dart:io на веб-платформе
-// Этот файл используется только для условного импорта и никогда не выполняется
-// так как код с File/Directory защищен проверкой kIsWeb
 
 class File {
   final String _path;
@@ -8,6 +5,7 @@ class File {
   Future<bool> exists() => throw UnsupportedError('File API недоступен на веб-платформе');
   Future<List<int>> readAsBytes() => throw UnsupportedError('File API недоступен на веб-платформе');
   Future<File> writeAsBytes(List<int> bytes) => throw UnsupportedError('File API недоступен на веб-платформе');
+  Future<File> delete({bool recursive = false}) => throw UnsupportedError('File API недоступен на веб-платформе');
   String get path => _path;
 }
 

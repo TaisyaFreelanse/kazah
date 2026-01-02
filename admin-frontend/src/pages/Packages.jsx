@@ -25,7 +25,6 @@ const Packages = () => {
       const response = await axios.get('/api/packages');
       setPackages(response.data);
       
-      // Если пакетов нет, создаем пакеты по умолчанию
       if (response.data.length === 0) {
         await createDefaultPackages();
       }
@@ -48,7 +47,6 @@ const Packages = () => {
         await axios.post('/api/packages', pkg);
       }
 
-      // Перезагружаем список
       const response = await axios.get('/api/packages');
       setPackages(response.data);
       setSuccess('Пакеты по умолчанию созданы');

@@ -11,7 +11,6 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// Настройка multer для загрузки файлов пакетов
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../uploads/packages');
@@ -29,7 +28,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
         file.mimetype === 'application/vnd.ms-excel') {
@@ -40,7 +39,6 @@ const upload = multer({
   },
 });
 
-// Получить все пакеты (только для админа)
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const packages = await Package.findAll();
@@ -50,7 +48,6 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Получить один пакет
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const packageItem = await Package.findById(req.params.id);
@@ -63,7 +60,6 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Создать новый пакет
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { name, nameKZ, nameRU, iconColor, price, isActive } = req.body;
@@ -83,7 +79,6 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Обновить пакет
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { name, nameKZ, nameRU, iconColor, price, isActive } = req.body;
@@ -107,16 +102,14 @@ router.put('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Удалить пакет
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const packageItem = await Package.findById(req.params.id);
     if (!packageItem) {
-      return res.status(404).json({ error: 'Пакет не найден' });
-    }
+        return res.status(404).json({ error: 'Пакет не найден' });
+      }
 
-    // Удаляем файлы пакета
-    if (packageItem.files.kz?.file_url) {
+      if (packageItem.files.kz?.file_url) {
       try {
         await fs.unlink(path.join(__dirname, '..', packageItem.files.kz.file_url));
       } catch (err) {
@@ -138,7 +131,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Загрузить файл для пакета
 router.post('/:id/upload', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -154,11 +146,10 @@ router.post('/:id/upload', authenticateToken, upload.single('file'), async (req,
     const packageItem = await Package.findById(req.params.id);
     if (!packageItem) {
       await fs.unlink(req.file.path);
-      return res.status(404).json({ error: 'Пакет не найден' });
-    }
+        return res.status(404).json({ error: 'Пакет не найден' });
+      }
 
-    // Удаляем старый файл, если существует
-    const oldFile = packageItem.files[language.toLowerCase()];
+      const oldFile = packageItem.files[language.toLowerCase()];
     if (oldFile?.file_url) {
       try {
         await fs.unlink(path.join(__dirname, '..', oldFile.file_url));
@@ -167,7 +158,6 @@ router.post('/:id/upload', authenticateToken, upload.single('file'), async (req,
       }
     }
 
-    // Обновляем информацию о файле
     await Package.updateFile(req.params.id, language, {
       fileUrl: `/uploads/packages/${req.file.filename}`,
       fileName: req.file.originalname,
@@ -188,7 +178,6 @@ router.post('/:id/upload', authenticateToken, upload.single('file'), async (req,
   }
 });
 
-// Удалить файл пакета
 router.delete('/:id/file/:language', authenticateToken, async (req, res) => {
   try {
     const { id, language } = req.params;

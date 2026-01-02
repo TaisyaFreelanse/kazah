@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 
 class TimerService {
   Timer? _timer;
-  int _secondsRemaining = 13;
+  int _secondsRemaining = 23;
   final Function(int)? onTick;
   final VoidCallback? onTimeout;
 
@@ -13,12 +13,12 @@ class TimerService {
   });
 
   void start() {
-    _secondsRemaining = 13;
+    _secondsRemaining = 23;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _secondsRemaining--;
       onTick?.call(_secondsRemaining);
-      
+
       if (_secondsRemaining <= 0) {
         stop();
         onTimeout?.call();
@@ -33,7 +33,7 @@ class TimerService {
 
   void reset() {
     stop();
-    _secondsRemaining = 13;
+    _secondsRemaining = 23;
   }
 
   int get secondsRemaining => _secondsRemaining;

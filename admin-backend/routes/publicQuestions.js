@@ -11,7 +11,6 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// Настройка multer для загрузки файлов
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../uploads/public-questions');
@@ -28,7 +27,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
         file.mimetype === 'application/vnd.ms-excel') {
@@ -39,7 +38,6 @@ const upload = multer({
   },
 });
 
-// Получить информацию о загруженных файлах
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const questions = await PublicQuestion.findAll();
@@ -49,7 +47,6 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Загрузить Excel файл
 router.post('/upload', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -58,12 +55,10 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
 
     const { language } = req.body;
     if (!language || !['KZ', 'RU'].includes(language)) {
-      // Удаляем загруженный файл если язык неверный
       await fs.unlink(req.file.path);
       return res.status(400).json({ error: 'Язык должен быть KZ или RU' });
     }
 
-    // Удаляем старый файл для этого языка, если существует
     const oldQuestion = await PublicQuestion.findByLanguage(language);
     if (oldQuestion && oldQuestion.file_url) {
       try {
@@ -74,7 +69,6 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
       await PublicQuestion.deleteByLanguage(language);
     }
 
-    // Создаем новую запись
     const publicQuestion = await PublicQuestion.create({
       language,
       fileUrl: `/uploads/public-questions/${req.file.filename}`,
@@ -88,7 +82,6 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
       question: publicQuestion,
     });
   } catch (error) {
-    // Удаляем файл при ошибке
     if (req.file) {
       await fs.unlink(req.file.path).catch(() => {});
     }
@@ -96,7 +89,6 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
   }
 });
 
-// Удалить файл
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const question = await PublicQuestion.findById(req.params.id);
@@ -104,7 +96,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Файл не найден' });
     }
 
-    // Удаляем физический файл
     try {
       await fs.unlink(path.join(__dirname, '..', question.file_url));
     } catch (err) {

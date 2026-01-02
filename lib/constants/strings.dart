@@ -1,5 +1,5 @@
 class AppStrings {
-  // Главное меню
+
   static const Map<String, String> start = {
     'KZ': 'СТАРТ ОЙЫН',
     'RU': 'СТАРТ ИГРЫ',
@@ -15,7 +15,6 @@ class AppStrings {
     'RU': 'ВЫХОД ИЗ ИГРЫ',
   };
 
-  // Пакеты
   static const Map<String, String> moreQuestions = {
     'KZ': 'Көбірек сұрақтар',
     'RU': 'Больше вопросов',
@@ -26,13 +25,11 @@ class AppStrings {
     'RU': 'История Казахстана',
   };
 
-  // Сообщения
   static const Map<String, String> timeoutMessage = {
-    'KZ': 'Ты не успел. Попробуй еще раз',
+    'KZ': 'Сіз уақытында жауап бермедіңіз. Қайта бастаңыз',
     'RU': 'К сожалению, ты не успел ответить',
   };
 
-  // Кнопки
   static const Map<String, String> restart = {
     'KZ': 'ҚАЙТА БАСТАУ',
     'RU': 'НАЧАТЬ ЗАНОВО',
@@ -43,7 +40,6 @@ class AppStrings {
     'RU': 'В ГЛАВНОЕ МЕНЮ',
   };
 
-  // Пакеты
   static const Map<String, String> purchased = {
     'KZ': 'Сатып алынған',
     'RU': 'Куплено',
@@ -54,7 +50,16 @@ class AppStrings {
     'RU': 'Купить',
   };
 
-  // Получить строку по языку
+  static const Map<String, String> packageInfo = {
+    'KZ': 'Әр пакет бір рет қана сатып алынады және сізде мәңгілікке қалады.\nПакетке кіретін сұрақ шыққан кезде, ол түсті белгішемен белгіленеді',
+    'RU': 'Каждый пакет приобретается один раз и остается у вас навсегда.\nКогда вам попадется вопрос из пакета, он будет иметь цветовой значок',
+  };
+
+  static const Map<String, String> wrongAnswerMessage = {
+    'KZ': 'Сенің жауабын қате',
+    'RU': 'Ты ответил неверно',
+  };
+
   static String getString(Map<String, String> strings, String language) {
     return strings[language] ?? strings['RU'] ?? '';
   }

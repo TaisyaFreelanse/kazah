@@ -14,26 +14,17 @@ class QuestionService {
   final PackageFileService _packageFileService = PackageFileService();
   final PublicQuestionService _publicQuestionService = PublicQuestionService();
 
-  /// Загружает все доступные вопросы (базовые + купленные пакеты)
   Future<List<Question>> getQuestions({
     required String language,
     List<String> purchasedPackageIds = const [],
   }) async {
     List<Question> allQuestions = [];
-
-    // Загружаем базовые вопросы
-    print('Получен язык: "$language" (длина: ${language.length})');
-    
-    // Приоритет 1: Пытаемся загрузить с сервера
     List<Question> baseQuestions = [];
-    
+
     if (kIsWeb) {
-      // На веб-платформе загружаем напрямую через HTTP
       try {
         final bytes = await _publicQuestionService.downloadPublicQuestionsFile(language: language);
         if (bytes != null) {
-          // Парсим байты напрямую (передаем через специальный формат)
-          print('Загрузка базовых вопросов с сервера (веб)...');
           final base64Data = base64Encode(bytes);
           baseQuestions = await _excelParser.parseQuestions(
             assetPath: 'bytes:$base64Data',
@@ -43,33 +34,27 @@ class QuestionService {
           baseQuestions = await _loadBaseQuestionsFromAssets(language);
         }
       } catch (e) {
-        print('Ошибка загрузки базовых вопросов с сервера, используем fallback: $e');
         baseQuestions = await _loadBaseQuestionsFromAssets(language);
       }
     } else {
-      // На мобильных платформах пытаемся загрузить и закэшировать
       try {
         final cachedPath = await _publicQuestionService.downloadAndCacheFile(language: language);
         if (cachedPath != null) {
-          print('Загрузка базовых вопросов из кэша: $cachedPath');
           baseQuestions = await _excelParser.parseQuestions(
             assetPath: cachedPath,
             packageId: null,
           );
         } else {
-          // Fallback на assets
+
           baseQuestions = await _loadBaseQuestionsFromAssets(language);
         }
       } catch (e) {
-        print('Ошибка загрузки базовых вопросов, используем fallback: $e');
         baseQuestions = await _loadBaseQuestionsFromAssets(language);
       }
     }
-    
-    print('Загружено базовых вопросов: ${baseQuestions.length}');
+
     allQuestions.addAll(baseQuestions);
 
-    // Загружаем вопросы из купленных пакетов
     for (final packageId in purchasedPackageIds) {
       final packageQuestions = await _loadPackageQuestions(
         packageId: packageId,
@@ -81,71 +66,56 @@ class QuestionService {
     return allQuestions;
   }
 
-  /// Загружает базовые вопросы из assets (fallback)
   Future<List<Question>> _loadBaseQuestionsFromAssets(String language) async {
     final baseQuestionsPath = language == 'KZ'
         ? 'assets/data/questions_kz.xlsx'
         : 'assets/data/questions_ru.xlsx';
 
-    print('Загрузка базовых вопросов из assets: $baseQuestionsPath');
     return await _excelParser.parseQuestions(
       assetPath: baseQuestionsPath,
-      packageId: null, // Базовые вопросы не имеют packageId
+      packageId: null,
     );
   }
 
-  /// Загружает вопросы из конкретного пакета
-  /// Поддерживает как числовые ID из API, так и строковые (legacy)
-  /// Приоритет: загрузка с сервера > локальные assets
   Future<List<Question>> _loadPackageQuestions({
     required String packageId,
     required String language,
   }) async {
-    // Сначала пытаемся получить информацию о пакете из API
+
     final packageService = PackageService();
     PackageInfo? packageInfo;
-    
+
     try {
       packageInfo = await packageService.getPackageById(packageId);
     } catch (e) {
-      print('Не удалось получить информацию о пакете $packageId из API: $e');
     }
-    
-    // Проверяем, является ли ID числовым (из API)
+
     final isNumericId = int.tryParse(packageId) != null;
-    
-    // Приоритет 1: Пытаемся загрузить файл с сервера (для числовых ID из API)
+
     if (isNumericId && packageInfo != null) {
       try {
-        // Пытаемся загрузить файл с сервера
         final filePath = await _packageFileService.downloadPackageFile(
           packageId: packageId,
           language: language,
         );
-        
+
         if (filePath != null) {
-          print('Загружаем вопросы из файла с сервера: $filePath');
           try {
             return await _excelParser.parseQuestions(
               assetPath: filePath,
               packageId: packageId,
             );
           } catch (e) {
-            print('Ошибка парсинга файла с сервера, пробуем fallback: $e');
-            // Продолжаем к fallback
           }
         }
       } catch (e) {
-        print('Ошибка загрузки файла с сервера, пробуем fallback: $e');
-        // Продолжаем к fallback
       }
     }
-    
-    // Приоритет 2: Fallback на локальные assets (для обратной совместимости)
+
     String? assetPath;
-    
+
     if (isNumericId && packageInfo != null) {
-      // Для числовых ID из API используем маппинг по имени пакета
+
       final packageName = packageInfo.nameKz.toLowerCase();
       if (packageName.contains('тарих') || packageName.contains('история') || 
           packageInfo.nameRu.toLowerCase().contains('история')) {
@@ -154,11 +124,11 @@ class QuestionService {
             : 'assets/data/history_ru.xlsx';
       } else if (packageName.contains('көбірек') || packageName.contains('больше') ||
                  packageInfo.nameRu.toLowerCase().contains('больше')) {
-        // Для пакета "Больше вопросов" используем fallback на assets или возвращаем пустой список
-        assetPath = null; // Файлы могут быть загружены с сервера выше
+
+        assetPath = null;
       }
     } else {
-      // Для строковых ID (legacy) используем старый маппинг
+
       switch (packageId) {
         case 'history':
           assetPath = language == 'KZ'
@@ -166,7 +136,7 @@ class QuestionService {
               : 'assets/data/history_ru.xlsx';
           break;
         case 'more_questions':
-          // Для пакета "Больше вопросов" нет локальных файлов
+
           return [];
         default:
           return [];
@@ -177,19 +147,15 @@ class QuestionService {
 
     try {
       return await _excelParser.parseQuestions(
-        assetPath: assetPath,
-        packageId: packageId,
-      );
-    } catch (e) {
-      print('Ошибка загрузки пакета $packageId: $e');
-      return [];
-    }
+      assetPath: assetPath,
+      packageId: packageId,
+    );
+  } catch (e) {
+    return [];
+  }
   }
 
-  /// Выбирает 13 вопросов для игры: 4 простых + 6 средних + 3 сложных
-  /// И применяет рандомизацию ответов
   List<Question> selectGameQuestions(List<Question> allQuestions) {
-    // Разделяем вопросы по сложности
     final easyQuestions = allQuestions
         .where((q) => q.difficulty == Difficulty.easy)
         .toList();
@@ -200,77 +166,170 @@ class QuestionService {
         .where((q) => q.difficulty == Difficulty.hard)
         .toList();
 
-    // Перемешиваем каждый список
     easyQuestions.shuffle();
     mediumQuestions.shuffle();
     hardQuestions.shuffle();
 
-    // Выбираем нужное количество (4 простых, 6 средних, 3 сложных)
-    final selectedEasy = easyQuestions.take(4).toList();
-    final selectedMedium = mediumQuestions.take(6).toList();
-    final selectedHard = hardQuestions.take(3).toList();
+    const int targetEasy = 4;
+    const int targetMedium = 6;
+    const int targetHard = 3;
+    const int totalTarget = 13;
 
-    // Проверяем, что достаточно вопросов
-    if (selectedEasy.length < 4 ||
-        selectedMedium.length < 6 ||
-        selectedHard.length < 3) {
-      print('Предупреждение: недостаточно вопросов для игры');
+    Set<String> usedQuestionTexts = {};
+    List<Question> selectedEasy = [];
+    List<Question> selectedMedium = [];
+    List<Question> selectedHard = [];
+
+    for (var question in easyQuestions) {
+      if (selectedEasy.length >= targetEasy) break;
+      if (!usedQuestionTexts.contains(question.text)) {
+        selectedEasy.add(question);
+        usedQuestionTexts.add(question.text);
+      }
     }
 
-    // Объединяем все выбранные вопросы
+    for (var question in mediumQuestions) {
+      if (selectedMedium.length >= targetMedium) break;
+      if (!usedQuestionTexts.contains(question.text)) {
+        selectedMedium.add(question);
+        usedQuestionTexts.add(question.text);
+      }
+    }
+
+    for (var question in hardQuestions) {
+      if (selectedHard.length >= targetHard) break;
+      if (!usedQuestionTexts.contains(question.text)) {
+        selectedHard.add(question);
+        usedQuestionTexts.add(question.text);
+      }
+    }
+
+    int neededEasy = targetEasy - selectedEasy.length;
+    int neededMedium = targetMedium - selectedMedium.length;
+    int neededHard = targetHard - selectedHard.length;
+
+    List<Question> remainingEasy = easyQuestions
+        .where((q) => !usedQuestionTexts.contains(q.text))
+        .toList();
+    List<Question> remainingMedium = mediumQuestions
+        .where((q) => !usedQuestionTexts.contains(q.text))
+        .toList();
+    List<Question> remainingHard = hardQuestions
+        .where((q) => !usedQuestionTexts.contains(q.text))
+        .toList();
+
+    if (neededEasy > 0) {
+      for (var question in remainingMedium) {
+        if (selectedEasy.length >= targetEasy) break;
+        if (!usedQuestionTexts.contains(question.text)) {
+          selectedEasy.add(question);
+          usedQuestionTexts.add(question.text);
+        }
+      }
+
+      if (selectedEasy.length < targetEasy) {
+        for (var question in remainingHard) {
+          if (selectedEasy.length >= targetEasy) break;
+          if (!usedQuestionTexts.contains(question.text)) {
+            selectedEasy.add(question);
+            usedQuestionTexts.add(question.text);
+          }
+        }
+      }
+    }
+
+    if (neededMedium > 0) {
+      for (var question in remainingEasy) {
+        if (selectedMedium.length >= targetMedium) break;
+        if (!usedQuestionTexts.contains(question.text)) {
+          selectedMedium.add(question);
+          usedQuestionTexts.add(question.text);
+        }
+      }
+
+      if (selectedMedium.length < targetMedium) {
+        for (var question in remainingHard) {
+          if (selectedMedium.length >= targetMedium) break;
+          if (!usedQuestionTexts.contains(question.text)) {
+            selectedMedium.add(question);
+            usedQuestionTexts.add(question.text);
+          }
+        }
+      }
+    }
+
+    if (neededHard > 0) {
+      for (var question in remainingMedium) {
+        if (selectedHard.length >= targetHard) break;
+        if (!usedQuestionTexts.contains(question.text)) {
+          selectedHard.add(question);
+          usedQuestionTexts.add(question.text);
+        }
+      }
+
+      if (selectedHard.length < targetHard) {
+        for (var question in remainingEasy) {
+          if (selectedHard.length >= targetHard) break;
+          if (!usedQuestionTexts.contains(question.text)) {
+            selectedHard.add(question);
+            usedQuestionTexts.add(question.text);
+          }
+        }
+      }
+    }
+
     List<Question> selectedQuestions = [];
     selectedQuestions.addAll(selectedEasy);
     selectedQuestions.addAll(selectedMedium);
     selectedQuestions.addAll(selectedHard);
 
-    // Перемешиваем порядок вопросов
-    selectedQuestions.shuffle();
+    Set<String> finalCheck = {};
+    List<Question> uniqueQuestions = [];
+    for (var question in selectedQuestions) {
+      if (!finalCheck.contains(question.text)) {
+        uniqueQuestions.add(question);
+        finalCheck.add(question.text);
+      }
+    }
+    selectedQuestions = uniqueQuestions;
 
-    // Применяем рандомизацию ответов для каждого вопроса
-    return selectedQuestions.map((question) {
-      // Используем исходные ответы (правильный всегда первый, индекс 0)
-      // Вопросы из парсера уже имеют правильный ответ с индексом 0
+    final result = selectedQuestions.map((question) {
       return Question.withRandomizedAnswers(
         text: question.text,
-        answers: question.answers, // Ответы уже в правильном формате
+        answers: question.answers,
         difficulty: question.difficulty,
         packageId: question.packageId,
       );
     }).toList();
+
+    return result;
   }
 
-  /// Получает список купленных пакетов
-  /// Возвращает ID пакетов, которые были куплены пользователем
-  /// ID могут быть как строковыми (для старых покупок), так и числовыми (из API)
   Future<List<String>> getPurchasedPackages() async {
-    // Получаем все доступные пакеты из API
+
     final packageService = PackageService();
     List<String> purchased = [];
-    
+
     try {
       final packages = await packageService.getActivePackages();
-      
-      // Проверяем каждый пакет из API
+
       for (final package in packages) {
-        // Проверяем покупку по ID из API
+
         if (await _purchaseService.isPackagePurchased(package.id)) {
           purchased.add(package.id);
         }
       }
-      
-      // Также проверяем старые покупки по строковым ID (для обратной совместимости)
+
       final legacyPackages = ['history', 'more_questions'];
       for (final legacyId in legacyPackages) {
         if (await _purchaseService.isPackagePurchased(legacyId)) {
-          // Проверяем, не добавлен ли уже этот пакет
+
           if (!purchased.contains(legacyId)) {
             purchased.add(legacyId);
           }
         }
       }
     } catch (e) {
-      print('Ошибка получения пакетов из API, используем fallback: $e');
-      // Fallback на старый способ при ошибке API
       final availablePackages = ['history', 'more_questions'];
       for (final packageId in availablePackages) {
         if (await _purchaseService.isPackagePurchased(packageId)) {
@@ -282,52 +341,43 @@ class QuestionService {
     return purchased;
   }
 
-  /// Полная загрузка и подготовка вопросов для игры
   Future<List<Question>> prepareGameQuestions(String language) async {
-    // Получаем купленные пакеты
     final purchasedPackages = await getPurchasedPackages();
 
-    // Загружаем все вопросы
     final allQuestions = await getQuestions(
       language: language,
       purchasedPackageIds: purchasedPackages,
     );
 
-    // Выбираем и рандомизируем 13 вопросов
     return selectGameQuestions(allQuestions);
   }
 
-  /// Получает альтернативный вопрос того же уровня сложности
-  /// Исключает текущий вопрос и вопросы, уже используемые в игре
-  /// ВАЖНО: allAvailableQuestions должны быть уже рандомизированы
   Question? getAlternativeQuestion(
     Question currentQuestion,
     List<Question> allAvailableQuestions,
     List<Question> usedQuestions,
   ) {
-    // Фильтруем вопросы по сложности
+    final usedTexts = usedQuestions.map((q) => q.text).toSet();
+    usedTexts.add(currentQuestion.text);
+
     final sameDifficultyQuestions = allAvailableQuestions
         .where((q) => q.difficulty == currentQuestion.difficulty)
-        .where((q) => q.text != currentQuestion.text) // Исключаем текущий вопрос
-        .where((q) => !usedQuestions.any((used) => used.text == q.text)) // Исключаем уже использованные
+        .where((q) => !usedTexts.contains(q.text))
         .toList();
 
-    if (sameDifficultyQuestions.isEmpty) return null;
+    if (sameDifficultyQuestions.isEmpty) {
+      return null;
+    }
 
-    // Перемешиваем и берем первый
     sameDifficultyQuestions.shuffle();
     final alternative = sameDifficultyQuestions.first;
 
-    // Для правильной рандомизации нужно восстановить исходный порядок
-    // Правильный ответ находится на позиции correctAnswerIndex
     final originalAnswers = List<String>.from(alternative.answers);
     final correctAnswerText = originalAnswers[alternative.correctAnswerIndex];
-    
-    // Перемещаем правильный ответ на первое место для корректной рандомизации
+
     originalAnswers.remove(correctAnswerText);
     originalAnswers.insert(0, correctAnswerText);
 
-    // Применяем новую рандомизацию ответов
     return Question.withRandomizedAnswers(
       text: alternative.text,
       answers: originalAnswers,

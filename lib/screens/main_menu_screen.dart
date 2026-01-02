@@ -6,6 +6,7 @@ import '../widgets/language_button.dart';
 import '../constants/colors.dart';
 import '../constants/strings.dart';
 import '../providers/language_provider.dart';
+import '../utils/responsive.dart';
 import 'packages_screen.dart';
 import 'game_screen.dart';
 import 'dart:io';
@@ -22,6 +23,7 @@ class _MainMenuScreenState extends State<MainMenuScreen>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  bool _isLoadingGame = false;
 
   @override
   void initState() {
@@ -79,13 +81,13 @@ class _MainMenuScreenState extends State<MainMenuScreen>
         child: SafeArea(
           child: Stack(
             children: [
-              // Декоративные элементы фона с градиентами
+
               Positioned(
-                top: -80,
-                right: -80,
+                top: -Responsive.heightPercent(context, 10),
+                right: -Responsive.widthPercent(context, 20),
                 child: Container(
-                  width: 300,
-                  height: 300,
+                  width: Responsive.widthPercent(context, 75),
+                  height: Responsive.widthPercent(context, 75),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
@@ -100,11 +102,11 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                 ),
               ),
               Positioned(
-                bottom: -120,
-                left: -120,
+                bottom: -Responsive.heightPercent(context, 15),
+                left: -Responsive.widthPercent(context, 30),
                 child: Container(
-                  width: 400,
-                  height: 400,
+                  width: Responsive.widthPercent(context, 100),
+                  height: Responsive.widthPercent(context, 100),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
@@ -119,11 +121,11 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                 ),
               ),
               Positioned(
-                top: MediaQuery.of(context).size.height * 0.3,
-                left: -50,
+                top: Responsive.heightPercent(context, 30),
+                left: -Responsive.widthPercent(context, 12),
                 child: Container(
-                  width: 200,
-                  height: 200,
+                  width: Responsive.widthPercent(context, 50),
+                  height: Responsive.widthPercent(context, 50),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
@@ -136,11 +138,11 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                 ),
               ),
               Positioned(
-                top: MediaQuery.of(context).size.height * 0.6,
-                right: -30,
+                top: Responsive.heightPercent(context, 60),
+                right: -Responsive.widthPercent(context, 7),
                 child: Container(
-                  width: 150,
-                  height: 150,
+                  width: Responsive.widthPercent(context, 37),
+                  height: Responsive.widthPercent(context, 37),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
@@ -152,49 +154,48 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                   ),
                 ),
               ),
-              // Основной контент
+
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Spacer(flex: 2),
-                    // Персонаж (монстр) с анимацией - уменьшенный размер
+                padding: Responsive.horizontalPadding(context, small: 24, medium: 32, large: 40).copyWith(
+                  top: Responsive.heightPercent(context, 2),
+                  bottom: Responsive.heightPercent(context, 2),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final screenHeight = Responsive.screenHeight(context);
+                    final isSmallScreen = screenHeight < 700;
+
+                    return SingleChildScrollView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(height: Responsive.dp(context, isSmallScreen ? 20 : 30)),
+
                     ScaleTransition(
                       scale: _scaleAnimation,
                       child: FadeTransition(
                         opacity: _fadeAnimation,
                         child: Container(
-                          width: 100,
-                          height: 100,
+                          width: Responsive.dp(context, isSmallScreen ? 80 : 100),
+                          height: Responsive.dp(context, isSmallScreen ? 80 : 100),
                           decoration: BoxDecoration(
-                            color: AppColors.cardBackground, // Темно-фиолетовый цвет
+                            color: const Color(0xFF4B0000),
                             shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.cardBackground.withOpacity(0.6),
-                                blurRadius: 25,
-                                spreadRadius: 8,
-                              ),
-                              BoxShadow(
-                                color: AppColors.glowPurple.withOpacity(0.3),
-                                blurRadius: 40,
-                                spreadRadius: 4,
-                              ),
-                            ],
                           ),
                           child: ClipOval(
                             child: Image.asset(
                               'assets/images/logo_b.jpg',
-                              width: 100,
-                              height: 100,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
-                                // Fallback на иконку, если изображение не найдено
-                                return const Center(
+                                return Center(
                                   child: Icon(
                                     Icons.psychology,
-                                    size: 50,
+                                    size: Responsive.adaptiveSize(context, small: 50, medium: 60, large: 70),
                                     color: AppColors.textPrimary,
                                   ),
                                 );
@@ -204,45 +205,54 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    // Текст "Bilim Bilem" - жирный блочный шрифт с белой обводкой
+                    SizedBox(height: Responsive.dp(context, isSmallScreen ? 12 : 16)),
+
                     FadeTransition(
                       opacity: _fadeAnimation,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Белая обводка
-                          Text(
-                            'BILIM BILEM',
-                            style: GoogleFonts.inter(
-                              fontSize: 42,
-                              fontWeight: FontWeight.w900,
-                              foreground: Paint()
-                                ..style = PaintingStyle.stroke
-                                ..strokeWidth = 3
-                                ..color = Colors.white,
-                              letterSpacing: 3.0,
-                              height: 1.0,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          // Основной текст
-                          Text(
-                            'BILIM BILEM',
-                            style: GoogleFonts.inter(
-                              fontSize: 42,
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.cardBackground,
-                              letterSpacing: 3.0,
-                              height: 1.0,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final fontSize = Responsive.textSize(
+                            context,
+                            isSmallScreen ? 24 : 28,
+                          );
+                          final strokeWidth = Responsive.dp(context, 2);
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+
+                              Text(
+                                'BILIM BILEM',
+                                style: GoogleFonts.inter(
+                                  fontSize: fontSize,
+                                  fontWeight: FontWeight.w900,
+                                  foreground: Paint()
+                                    ..style = PaintingStyle.stroke
+                                    ..strokeWidth = strokeWidth
+                                    ..color = Colors.white,
+                                  letterSpacing: Responsive.dp(context, 3),
+                                  height: 1.0,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+
+                              Text(
+                                'BILIM BILEM',
+                                style: GoogleFonts.inter(
+                                  fontSize: fontSize,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.cardBackground,
+                                  letterSpacing: Responsive.dp(context, 3),
+                                  height: 1.0,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
-                    const Spacer(flex: 1),
-                    // Кнопки выбора языка KZ/RU - над кнопкой "Начать игру"
+                            SizedBox(height: Responsive.dp(context, isSmallScreen ? 12 : 16)),
+
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: Row(
@@ -255,7 +265,7 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                               languageProvider.setLanguage('KZ');
                             },
                           ),
-                          const SizedBox(width: 16),
+                          SizedBox(width: Responsive.widthPercent(context, 4)),
                           LanguageButton(
                             language: 'RU',
                             isSelected: currentLanguage == 'RU',
@@ -266,62 +276,101 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    // Кнопка "Let's start game" с эффектом свечения - уменьшенный размер
+                    SizedBox(height: Responsive.dp(context, isSmallScreen ? 12 : 16)),
+
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(Responsive.dp(context, 16)),
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.startButton.withOpacity(0.5),
-                              blurRadius: 15,
-                              spreadRadius: 4,
+                              blurRadius: Responsive.dp(context, 15),
+                              spreadRadius: Responsive.dp(context, 4),
                             ),
                             BoxShadow(
                               color: AppColors.glowPink.withOpacity(0.3),
-                              blurRadius: 25,
-                              spreadRadius: 2,
+                              blurRadius: Responsive.dp(context, 25),
+                              spreadRadius: Responsive.dp(context, 2),
                             ),
                           ],
                         ),
                         child: SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const GameScreen()),
-                              );
+                            onPressed: _isLoadingGame ? null : () async {
+
+                              if (_isLoadingGame) return;
+
+                              setState(() {
+                                _isLoadingGame = true;
+                              });
+
+                              try {
+
+                                await Future.delayed(const Duration(milliseconds: 100));
+
+                                if (mounted) {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const GameScreen()),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) {
+                                  setState(() {
+                                    _isLoadingGame = false;
+                                  });
+                                }
+                              }
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.startButton,
-                              foregroundColor: AppColors.textPrimary,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: _isLoadingGame 
+                                  ? AppColors.cardBackground.withOpacity(0.6)
+                                  : AppColors.cardBackground,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                vertical: Responsive.buttonHeight(context, small: 16, medium: 18, large: 20),
+                              ),
+                              minimumSize: Size(
+                                double.infinity,
+                                Responsive.buttonHeight(context, small: 48, medium: 52, large: 56),
+                              ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(50), // Круглая форма (pill)
+                                borderRadius: BorderRadius.circular(Responsive.dp(context, 50)),
                               ),
                               elevation: 0,
+                              disabledBackgroundColor: AppColors.cardBackground.withOpacity(0.6),
                             ),
-                            child: Text(
-                              currentLanguage == 'KZ' 
-                                  ? 'Ойынды бастау'
-                                  : currentLanguage == 'RU'
-                                      ? 'Начать игру'
-                                      : 'Let\'s start game',
-                              style: GoogleFonts.nunito(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
+                            child: _isLoadingGame
+                                ? SizedBox(
+                                    width: Responsive.dp(context, 20),
+                                    height: Responsive.dp(context, 20),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: Responsive.dp(context, 2),
+                                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : Text(
+                                    currentLanguage == 'KZ' 
+                                        ? 'Ойынды бастау'
+                                        : currentLanguage == 'RU'
+                                            ? 'Начать игру'
+                                            : 'Let\'s start game',
+                                    style: GoogleFonts.nunito(
+                                      fontSize: Responsive.textSize(context, isSmallScreen ? 16 : 18),
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: Responsive.dp(context, 0.5),
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 18),
-                    // Кнопка "Дополнительные вопросы" - уменьшенный размер
+                    SizedBox(height: Responsive.dp(context, isSmallScreen ? 12 : 16)),
+
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: SizedBox(
@@ -336,14 +385,21 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                             );
                           },
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textPrimary,
+                            backgroundColor: AppColors.cardBackground,
+                            foregroundColor: Colors.white,
                             side: BorderSide(
-                              color: AppColors.cardBorder,
-                              width: 2,
+                              color: AppColors.cardBackground,
+                              width: Responsive.dp(context, 2),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            padding: EdgeInsets.symmetric(
+                              vertical: Responsive.dp(context, isSmallScreen ? 12 : 14),
+                            ),
+                            minimumSize: Size(
+                              double.infinity,
+                              Responsive.dp(context, isSmallScreen ? 44 : 48),
+                            ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(Responsive.dp(context, 16)),
                             ),
                           ),
                           child: Text(
@@ -352,16 +408,17 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                               currentLanguage,
                             ),
                             style: GoogleFonts.nunito(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.4,
+                              fontSize: Responsive.textSize(context, isSmallScreen ? 13 : 14),
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: Responsive.dp(context, 0.4),
+                              color: Colors.white,
                             ),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 18),
-                    // Кнопка "Выход" - более заметная
+                    SizedBox(height: Responsive.dp(context, isSmallScreen ? 12 : 16)),
+
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: SizedBox(
@@ -371,30 +428,41 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                             _showExitDialog(context, currentLanguage);
                           },
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.cardBackground,
+                            backgroundColor: AppColors.cardBackground,
+                            foregroundColor: Colors.white,
                             side: BorderSide(
                               color: AppColors.cardBackground,
-                              width: 2,
+                              width: Responsive.dp(context, 2),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: EdgeInsets.symmetric(
+                              vertical: Responsive.dp(context, isSmallScreen ? 10 : 12),
+                            ),
+                            minimumSize: Size(
+                              double.infinity,
+                              Responsive.dp(context, isSmallScreen ? 40 : 44),
+                            ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(Responsive.dp(context, 16)),
                             ),
                           ),
                           child: Text(
                             AppStrings.getString(AppStrings.exitGame, currentLanguage),
                             style: GoogleFonts.nunito(
-                              color: AppColors.cardBackground,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.5,
+                              color: Colors.white,
+                              fontSize: Responsive.textSize(context, isSmallScreen ? 13 : 14),
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: Responsive.dp(context, 0.3),
                             ),
                           ),
                         ),
                       ),
                     ),
-                    const Spacer(flex: 1),
-                  ],
+                            SizedBox(height: Responsive.dp(context, isSmallScreen ? 12 : 16)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

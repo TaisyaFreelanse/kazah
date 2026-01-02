@@ -10,25 +10,12 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # State management
   provider: ^6.1.1
-  
-  # Local storage
   shared_preferences: ^2.2.2
-  
-  # Excel parsing
   excel: ^3.0.0
-  
-  # In-App Purchase
   in_app_purchase: ^3.1.11
-  
-  # Fonts
   google_fonts: ^6.1.0
-  
-  # HTTP requests
   http: ^1.1.0
-  
-  # Path utilities
   path: ^1.8.3
   path_provider: ^2.1.1
 
@@ -36,6 +23,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
@@ -43,10 +31,12 @@ flutter:
   assets:
     - assets/data/
     - assets/images/
-  
-  # Uncomment if you want to add custom fonts
-  # fonts:
-  #   - family: CustomFont
-  #     fonts:
-  #       - asset: fonts/CustomFont-Regular.ttf
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/logo_b.jpg"
+  adaptive_icon_background: "#2F2F2F"
+  adaptive_icon_foreground: "assets/images/logo_b.jpg"
+  remove_alpha_ios: true
 

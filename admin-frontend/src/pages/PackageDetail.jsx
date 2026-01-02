@@ -35,7 +35,6 @@ const PackageDetail = () => {
   const handleFileUpload = async (language, file) => {
     if (!file) return;
 
-    // Проверяем формат файла
     const validExtensions = ['.xlsx', '.xls'];
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
     if (!validExtensions.includes(fileExtension)) {

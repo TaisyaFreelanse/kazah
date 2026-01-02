@@ -24,7 +24,6 @@ class Package {
     );
     const packages = result.rows;
 
-    // Загружаем файлы для каждого пакета
     for (const pkg of packages) {
       const filesResult = await query(
         'SELECT * FROM package_files WHERE package_id = $1',
@@ -45,7 +44,6 @@ class Package {
     );
     const packages = result.rows;
 
-    // Загружаем файлы для каждого пакета
     for (const pkg of packages) {
       const filesResult = await query(
         'SELECT * FROM package_files WHERE package_id = $1',
@@ -69,7 +67,6 @@ class Package {
 
     const pkg = result.rows[0];
 
-    // Загружаем файлы
     const filesResult = await query(
       'SELECT * FROM package_files WHERE package_id = $1',
       [id]
@@ -128,18 +125,15 @@ class Package {
   }
 
   static async delete(id) {
-    // Файлы удалятся автоматически из-за ON DELETE CASCADE
     await query('DELETE FROM packages WHERE id = $1', [id]);
   }
 
   static async updateFile(packageId, language, fileData) {
-    // Удаляем старый файл, если есть
     await query(
       'DELETE FROM package_files WHERE package_id = $1 AND language = $2',
       [packageId, language]
     );
 
-    // Вставляем новый файл
     if (fileData.fileUrl) {
       await query(
         `INSERT INTO package_files (package_id, language, file_url, file_name, file_size, uploaded_at)

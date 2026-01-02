@@ -5,7 +5,6 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Инициализация админа по умолчанию (только при первом запуске)
 router.post('/init', async (req, res) => {
   try {
     const adminCount = await Admin.count();
@@ -23,7 +22,6 @@ router.post('/init', async (req, res) => {
   }
 });
 
-// Вход в систему
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -61,12 +59,10 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Проверка токена
 router.get('/verify', authenticateToken, (req, res) => {
   res.json({ valid: true, user: req.user });
 });
 
-// Смена пароля
 router.post('/change-password', authenticateToken, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -84,7 +80,6 @@ router.post('/change-password', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Администратор не найден' });
     }
 
-    // Получаем полные данные админа для проверки пароля
     const adminFull = await Admin.findByUsername(admin.username);
     const adminModel = new Admin();
     const isPasswordValid = await adminModel.comparePassword(currentPassword, adminFull.password);

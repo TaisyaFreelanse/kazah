@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/colors.dart';
+import '../utils/responsive.dart';
 
 class LanguageButton extends StatelessWidget {
   final String language;
@@ -18,17 +19,14 @@ class LanguageButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isSelected ? AppColors.cardBorder : AppColors.cardBorder.withOpacity(0.3),
-          width: 2,
-        ),
+        borderRadius: BorderRadius.circular(Responsive.dp(context, 12)),
         boxShadow: isSelected
             ? [
                 BoxShadow(
-                  color: AppColors.darkPrimary.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+                  color: Colors.white.withOpacity(0.3),
+                  blurRadius: Responsive.dp(context, 6),
+                  spreadRadius: Responsive.dp(context, 1),
+                  offset: Offset(0, Responsive.dp(context, 2)),
                 ),
               ]
             : null,
@@ -36,23 +34,29 @@ class LanguageButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: isSelected 
-              ? AppColors.questionCardBackground 
-              : AppColors.questionCardBackground.withOpacity(0.7),
-          foregroundColor: AppColors.textPrimary,
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+          backgroundColor: AppColors.cardBackground,
+          foregroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(
+            horizontal: Responsive.dp(context, 20),
+            vertical: Responsive.dp(context, 10),
+          ),
+          minimumSize: Size(
+            Responsive.dp(context, 80),
+            Responsive.dp(context, 36),
+          ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(Responsive.dp(context, 12)),
           ),
-          elevation: isSelected ? 4 : 0,
+          elevation: 0,
         ),
-        child: Text(
-          language,
-          style: GoogleFonts.nunito(
-            fontSize: 15,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          child: Text(
+            language,
+            style: GoogleFonts.nunito(
+              fontSize: Responsive.textSize(context, 14),
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+            ),
           ),
-        ),
       ),
     );
   }

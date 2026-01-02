@@ -8,6 +8,7 @@ import '../services/purchase_service.dart';
 import '../services/package_service.dart';
 import '../constants/colors.dart';
 import '../constants/strings.dart';
+import '../utils/responsive.dart';
 
 class PackagesScreen extends StatefulWidget {
   const PackagesScreen({super.key});
@@ -55,10 +56,9 @@ class _PackagesScreenState extends State<PackagesScreen>
     });
 
     try {
-      // Загружаем пакеты из API
+
       final packages = await _packageService.getActivePackages();
-      
-      // Проверяем статус покупки для каждого пакета
+
       final packagesWithPurchaseStatus = <PackageInfo>[];
       for (final package in packages) {
         final isPurchased = await _purchaseService.isPackagePurchased(package.id);
@@ -72,15 +72,26 @@ class _PackagesScreenState extends State<PackagesScreen>
         ));
       }
 
+      packagesWithPurchaseStatus.sort((a, b) {
+        final aName = a.getName('RU').toLowerCase();
+        final bName = b.getName('RU').toLowerCase();
+
+        if (aName.contains('больше вопросов') || aName.contains('көбірек сұрақтар')) return -1;
+        if (bName.contains('больше вопросов') || bName.contains('көбірек сұрақтар')) return 1;
+
+        if (aName.contains('история') || aName.contains('тарихы')) return -1;
+        if (bName.contains('история') || bName.contains('тарихы')) return 1;
+
+        return 0;
+      });
+
       setState(() {
         _packages = packagesWithPurchaseStatus;
         _isLoading = false;
       });
-      
+
       _animationController.forward();
     } catch (e) {
-      print('Ошибка загрузки пакетов: $e');
-      // Fallback на пакеты по умолчанию
       final moreQuestionsPurchased = await _purchaseService.isPackagePurchased('more_questions');
       final historyPurchased = await _purchaseService.isPackagePurchased('history');
 
@@ -105,13 +116,13 @@ class _PackagesScreenState extends State<PackagesScreen>
         ];
         _isLoading = false;
       });
-      
+
       _animationController.forward();
     }
   }
 
   void _setupPurchaseListener() {
-    // Настраиваем обработчик обновлений покупок
+
     _purchaseService.onPurchaseUpdated = (packageId, success, error) {
       if (!mounted) return;
 
@@ -119,10 +130,9 @@ class _PackagesScreenState extends State<PackagesScreen>
       final currentLanguage = languageProvider.currentLanguage;
 
       if (success) {
-        // Обновляем список пакетов
+
         _loadPackages();
 
-        // Показываем сообщение об успешной покупке
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -138,7 +148,7 @@ class _PackagesScreenState extends State<PackagesScreen>
           ),
         );
       } else if (error != null) {
-        // Показываем сообщение об ошибке
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(error),
@@ -154,35 +164,9 @@ class _PackagesScreenState extends State<PackagesScreen>
   }
 
   Future<void> _handlePurchase(String packageId) async {
-    // Инициируем покупку через In-App Purchase
+
     await _purchaseService.buyPackage(packageId);
-    // Результат будет обработан через onPurchaseUpdated callback
-  }
 
-  Future<void> _handleRestorePurchases() async {
-    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
-    final currentLanguage = languageProvider.currentLanguage;
-
-    // Восстанавливаем покупки
-    await _purchaseService.restorePurchases();
-
-    // Показываем сообщение
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            currentLanguage == 'KZ'
-                ? 'Покупкаларды қалпына келтіру...'
-                : 'Восстановление покупок...',
-          ),
-          backgroundColor: AppColors.darkCard,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
-    }
   }
 
   @override
@@ -211,37 +195,83 @@ class _PackagesScreenState extends State<PackagesScreen>
         child: SafeArea(
           child: Column(
             children: [
-              // Заголовок с улучшенным дизайном
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
+
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenHeight = Responsive.screenHeight(context);
+                  final isSmallScreen = screenHeight < 700;
+
+                  return Padding(
+                    padding: Responsive.horizontalPadding(
+                      context,
+                      small: isSmallScreen ? 16 : 20,
+                      medium: 22,
+                      large: 24,
+                    ).copyWith(
+                      top: Responsive.dp(context, isSmallScreen ? 12 : 16),
+                      bottom: Responsive.dp(context, isSmallScreen ? 12 : 16),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        AppStrings.getString(
-                          AppStrings.additionalQuestions,
-                          currentLanguage,
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            Icons.arrow_back,
+                            color: AppColors.cardBackground,
+                            size: Responsive.iconSize(context, small: 24, medium: 28, large: 32),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
                         ),
-                        style: GoogleFonts.nunito(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.cardBackground,
-                          letterSpacing: 0.5,
+                        SizedBox(width: Responsive.dp(context, 8)),
+                        Expanded(
+                          child: Text(
+                            AppStrings.getString(
+                              AppStrings.additionalQuestions,
+                              currentLanguage,
+                            ),
+                            style: GoogleFonts.nunito(
+                              fontSize: Responsive.textSize(context, isSmallScreen ? 18 : 20),
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.cardBackground,
+                              letterSpacing: Responsive.dp(context, 0.3),
+                            ),
+                          ),
                         ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenHeight = Responsive.screenHeight(context);
+                  final isSmallScreen = screenHeight < 700;
+
+                  return Padding(
+                    padding: Responsive.horizontalPadding(
+                      context,
+                      small: isSmallScreen ? 16 : 20,
+                      medium: 22,
+                      large: 24,
+                    ).copyWith(
+                      bottom: Responsive.dp(context, isSmallScreen ? 8 : 12),
+                    ),
+                    child: Text(
+                      AppStrings.getString(AppStrings.packageInfo, currentLanguage),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.nunito(
+                        fontSize: Responsive.textSize(context, isSmallScreen ? 12 : 14),
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.cardBackground.withOpacity(0.9),
+                        height: 1.4,
                       ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
-              
-              // Список пакетов
+
               Expanded(
                 child: _isLoading
                     ? const Center(
@@ -256,47 +286,37 @@ class _PackagesScreenState extends State<PackagesScreen>
                                   ? 'Пакеттер жоқ'
                                   : 'Пакеты недоступны',
                               style: GoogleFonts.nunito(
-                                fontSize: 18,
+                                fontSize: Responsive.adaptiveFontSize(context, small: 16, medium: 17, large: 18),
                                 color: AppColors.textSecondary,
                               ),
                             ),
                           )
-                        : FadeTransition(
-                            opacity: _fadeAnimation,
-                            child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20.0,
-                                vertical: 8.0,
-                              ),
-                              itemCount: _packages.length,
-                              itemBuilder: (context, index) {
-                                final package = _packages[index];
-                                return _buildPackageCard(package, currentLanguage, index);
-                              },
-                            ),
+                        : LayoutBuilder(
+                            builder: (context, constraints) {
+                              final screenHeight = Responsive.screenHeight(context);
+                              final isSmallScreen = screenHeight < 700;
+
+                              return FadeTransition(
+                                opacity: _fadeAnimation,
+                                child: ListView.builder(
+                                  padding: Responsive.horizontalPadding(
+                                    context,
+                                    small: isSmallScreen ? 16 : 20,
+                                    medium: 22,
+                                    large: 24,
+                                  ).copyWith(
+                                    top: Responsive.dp(context, 8),
+                                    bottom: Responsive.dp(context, 8),
+                                  ),
+                                  itemCount: _packages.length,
+                                  itemBuilder: (context, index) {
+                                    final package = _packages[index];
+                                    return _buildPackageCard(package, currentLanguage, index);
+                                  },
+                                ),
+                              );
+                            },
                           ),
-              ),
-              
-              // Кнопка восстановления покупок
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: TextButton(
-                    onPressed: _handleRestorePurchases,
-                    child: Text(
-                      currentLanguage == 'KZ'
-                          ? 'Покупкаларды қалпына келтіру'
-                          : 'Восстановить покупки',
-                      style: GoogleFonts.nunito(
-                        fontSize: 16,
-                        color: AppColors.textSecondary,
-                        decoration: TextDecoration.underline,
-                        decorationColor: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ),
               ),
             ],
           ),
@@ -307,186 +327,211 @@ class _PackagesScreenState extends State<PackagesScreen>
 
   Widget _buildPackageCard(PackageInfo package, String language, int index) {
     final isPurchased = package.isPurchased;
-    
+    final screenHeight = Responsive.screenHeight(context);
+    final isSmallScreen = screenHeight < 700;
+
     return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(Responsive.dp(context, 16)),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        filter: ImageFilter.blur(
+          sigmaX: Responsive.dp(context, 10),
+          sigmaY: Responsive.dp(context, 10),
+        ),
         child: Container(
-          margin: const EdgeInsets.only(bottom: 20),
+          margin: EdgeInsets.only(bottom: Responsive.dp(context, isSmallScreen ? 12 : 16)),
           decoration: BoxDecoration(
             color: AppColors.cardBackground.withOpacity(0.4),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(Responsive.dp(context, 16)),
             border: Border.all(
               color: isPurchased
                   ? AppColors.correctAnswer.withOpacity(0.5)
                   : AppColors.cardBorder.withOpacity(0.5),
-              width: 2,
+              width: Responsive.dp(context, 1.5),
             ),
             boxShadow: [
               BoxShadow(
                 color: package.color.withOpacity(0.3),
-                blurRadius: 20,
-                spreadRadius: 2,
+                blurRadius: Responsive.dp(context, 15),
+                spreadRadius: Responsive.dp(context, 1),
               ),
               BoxShadow(
                 color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+                blurRadius: Responsive.dp(context, 8),
+                offset: Offset(0, Responsive.dp(context, 2)),
               ),
             ],
           ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Row(
-          children: [
-            // Большой цветовой значок пакета
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  colors: [
-                    package.color,
-                    package.color.withOpacity(0.6),
-                  ],
-                ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: package.color.withOpacity(0.5),
-                    blurRadius: 15,
-                    spreadRadius: 3,
-                  ),
-                ],
-              ),
-              child: Icon(
-                Icons.quiz,
-                color: AppColors.textPrimary,
-                size: 32,
-              ),
+          child: Padding(
+            padding: Responsive.symmetricPadding(
+              context,
+              small: isSmallScreen ? 12 : 16,
+              medium: 18,
+              large: 20,
             ),
-            const SizedBox(width: 20),
-            
-            // Название и информация о пакете
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    package.getName(language),
-                    style: GoogleFonts.nunito(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: isPurchased
-                          ? AppColors.textPrimary
-                          : AppColors.textPrimary.withOpacity(0.9),
-                      letterSpacing: 0.5,
+            child: Row(
+              children: [
+
+                Container(
+                  width: Responsive.dp(context, isSmallScreen ? 48 : 56),
+                  height: Responsive.dp(context, isSmallScreen ? 48 : 56),
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      colors: [
+                        package.color,
+                        package.color.withOpacity(0.6),
+                      ],
                     ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: package.color.withOpacity(0.5),
+                        blurRadius: Responsive.dp(context, 12),
+                        spreadRadius: Responsive.dp(context, 2),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  if (package.price != null && !isPurchased) ...[
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.attach_money,
-                          size: 18,
-                          color: AppColors.textSecondary,
+                  child: Icon(
+                    Icons.quiz,
+                    color: AppColors.textPrimary,
+                    size: Responsive.dp(context, isSmallScreen ? 24 : 28),
+                  ),
+                ),
+                SizedBox(width: Responsive.dp(context, isSmallScreen ? 10 : 12)),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        package.getName(language),
+                        style: GoogleFonts.nunito(
+                          fontSize: Responsive.textSize(context, isSmallScreen ? 15 : 17),
+                          fontWeight: FontWeight.bold,
+                          color: isPurchased
+                              ? AppColors.textPrimary
+                              : AppColors.textPrimary.withOpacity(0.9),
+                          letterSpacing: Responsive.dp(context, 0.3),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${package.price} ₸',
-                          style: GoogleFonts.nunito(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
-                          ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: Responsive.dp(context, isSmallScreen ? 4 : 6)),
+                      if (package.price != null && !isPurchased) ...[
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${package.price}',
+                              style: GoogleFonts.nunito(
+                                fontSize: Responsive.textSize(context, isSmallScreen ? 14 : 16),
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            SizedBox(width: Responsive.dp(context, 4)),
+                            Text(
+                              '₸',
+                              style: GoogleFonts.nunito(
+                                fontSize: Responsive.textSize(context, isSmallScreen ? 14 : 16),
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else if (isPurchased) ...[
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              size: Responsive.dp(context, isSmallScreen ? 14 : 16),
+                              color: AppColors.correctAnswer,
+                            ),
+                            SizedBox(width: Responsive.dp(context, 6)),
+                            Text(
+                              AppStrings.getString(AppStrings.purchased, language),
+                              style: GoogleFonts.nunito(
+                                fontSize: Responsive.textSize(context, isSmallScreen ? 12 : 14),
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.correctAnswer,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                SizedBox(width: Responsive.dp(context, isSmallScreen ? 8 : 12)),
+
+                if (isPurchased)
+                  Container(
+                    padding: Responsive.symmetricPadding(
+                      context,
+                      small: isSmallScreen ? 8 : 10,
+                      medium: 12,
+                      large: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.correctAnswer.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.correctAnswer,
+                        width: Responsive.dp(context, 1.5),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.check_circle,
+                      color: AppColors.correctAnswer,
+                      size: Responsive.dp(context, isSmallScreen ? 20 : 24),
+                    ),
+                  )
+                else
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(Responsive.dp(context, 12)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: package.color.withOpacity(0.5),
+                          blurRadius: Responsive.dp(context, 12),
+                          spreadRadius: Responsive.dp(context, 1),
                         ),
                       ],
                     ),
-                  ] else if (isPurchased) ...[
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          size: 18,
-                          color: AppColors.correctAnswer,
+                    child: ElevatedButton(
+                      onPressed: () => _handlePurchase(package.id),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.cardBackground,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: Responsive.dp(context, isSmallScreen ? 16 : 20),
+                          vertical: Responsive.dp(context, isSmallScreen ? 10 : 12),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          AppStrings.getString(AppStrings.purchased, language),
-                          style: GoogleFonts.nunito(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.correctAnswer,
-                          ),
+                        minimumSize: Size(
+                          0,
+                          Responsive.dp(context, isSmallScreen ? 36 : 40),
                         ),
-                      ],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(Responsive.dp(context, 12)),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        AppStrings.getString(AppStrings.buy, language),
+                        style: GoogleFonts.nunito(
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          fontSize: Responsive.textSize(context, isSmallScreen ? 13 : 14),
+                          letterSpacing: Responsive.dp(context, 0.3),
+                        ),
+                      ),
                     ),
-                  ],
-                ],
-              ),
+                  ),
+              ],
             ),
-            
-            const SizedBox(width: 16),
-            
-            // Кнопка покупки/статус
-            if (isPurchased)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.correctAnswer.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.correctAnswer,
-                    width: 2,
-                  ),
-                ),
-                child: const Icon(
-                  Icons.check_circle,
-                  color: AppColors.correctAnswer,
-                  size: 28,
-                ),
-              )
-            else
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: package.color.withOpacity(0.5),
-                      blurRadius: 15,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  onPressed: () => _handlePurchase(package.id),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: package.color,
-                    foregroundColor: AppColors.textPrimary,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    AppStrings.getString(AppStrings.buy, language),
-                    style: GoogleFonts.nunito(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+          ),
         ),
       ),
     );
