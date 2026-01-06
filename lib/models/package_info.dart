@@ -7,6 +7,7 @@ class PackageInfo {
   final Color color;
   final bool isPurchased;
   final int? price;
+  final String? productId;
 
   PackageInfo({
     required this.id,
@@ -15,7 +16,31 @@ class PackageInfo {
     required this.color,
     this.isPurchased = false,
     this.price,
+    this.productId,
   });
+
+  String getProductId() {
+    if (productId != null && productId!.isNotEmpty) {
+      return productId!;
+    }
+    
+    final nameRuLower = nameRu.toLowerCase();
+    final nameKzLower = nameKz.toLowerCase();
+    
+    if (nameRuLower.contains('больше вопросов') || 
+        nameKzLower.contains('көбірек сұрақтар') ||
+        nameRuLower.contains('more questions')) {
+      return 'more_questions';
+    }
+    
+    if (nameRuLower.contains('история') || 
+        nameKzLower.contains('тарих') ||
+        nameRuLower.contains('history')) {
+      return 'history';
+    }
+    
+    return id;
+  }
 
   String getName(String language) {
     return language == 'KZ' ? nameKz : nameRu;
@@ -29,6 +54,7 @@ class PackageInfo {
       color: _hexToColor(json['iconColor'] ?? '#4CAF50'),
       isPurchased: false,
       price: json['price'] != null ? int.tryParse(json['price'].toString()) : null,
+      productId: json['productId'] ?? json['product_id'],
     );
   }
 
@@ -46,6 +72,18 @@ class PackageInfo {
 
   String toHex() {
     return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nameKZ': nameKz,
+      'nameRU': nameRu,
+      'iconColor': toHex(),
+      'isPurchased': isPurchased,
+      'price': price,
+      'productId': productId,
+    };
   }
 }
 

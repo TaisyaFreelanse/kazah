@@ -3,19 +3,59 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:convert';
 
 class PackageFileService {
 
-  static const String _apiBaseUrl = 'https:
+  static const String _apiBaseUrl = 'http://localhost:3000';
 
   Future<String?> downloadPackageFile({
     required String packageId,
     required String language,
+    bool forceRefresh = false,
   }) async {
     try {
+      if (kIsWeb) {
+        final response = await http.get(
+          Uri.parse('$_apiBaseUrl/api/public/packages/$packageId/files/$language'),
+          headers: {'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},
+        );
+
+        if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+          final base64Data = base64Encode(response.bodyBytes);
+          return 'bytes:$base64Data';
+        }
+        return null;
+      }
 
       final cachedPath = await _getCachedFilePath(packageId, language);
-      if (cachedPath != null && await File(cachedPath).exists()) {
+      final cachedFile = cachedPath != null ? File(cachedPath) : null;
+      final hasCachedFile = cachedFile != null && await cachedFile.exists();
+
+      if (hasCachedFile && !forceRefresh) {
+        try {
+          final response = await http.head(
+            Uri.parse('$_apiBaseUrl/api/public/packages/$packageId/files/$language'),
+            headers: {'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},
+          );
+
+          if (response.statusCode == 200) {
+            final lastModifiedHeader = response.headers['last-modified'];
+            if (lastModifiedHeader != null) {
+              final serverModified = DateTime.parse(lastModifiedHeader);
+              final localModified = await cachedFile.lastModified();
+              
+              if (serverModified.isAfter(localModified)) {
+                forceRefresh = true;
+              }
+            }
+          }
+        } catch (e) {
+        }
+      }
+
+      if (hasCachedFile && !forceRefresh) {
         return cachedPath;
       }
 
@@ -24,8 +64,7 @@ class PackageFileService {
         headers: {'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},
       );
 
-      if (response.statusCode == 200) {
-
+      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
         final file = await _saveToCache(
           packageId: packageId,
           language: language,
@@ -34,9 +73,16 @@ class PackageFileService {
 
         return file.path;
       } else {
+        if (hasCachedFile) {
+          return cachedPath;
+        }
         return null;
       }
     } catch (e) {
+      final cachedPath = await _getCachedFilePath(packageId, language);
+      if (cachedPath != null && await File(cachedPath).exists()) {
+        return cachedPath;
+      }
       return null;
     }
   }

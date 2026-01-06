@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "get-package-ids": "node scripts/get-package-ids.js"
   },
   "keywords": ["admin", "api", "blim-bilem"],
   "author": "",

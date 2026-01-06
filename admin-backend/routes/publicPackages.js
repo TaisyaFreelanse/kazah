@@ -9,6 +9,16 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
+router.get('/ids', async (req, res) => {
+  try {
+    const packages = await Package.findActive();
+    const ids = packages.map(pkg => pkg.id);
+    res.json(ids);
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка получения ID пакетов', details: error.message });
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
     const packages = await Package.findActive();

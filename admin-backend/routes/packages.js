@@ -39,6 +39,22 @@ const upload = multer({
   },
 });
 
+router.get('/ids', authenticateToken, async (req, res) => {
+  try {
+    const packages = await Package.findAll();
+    const ids = packages.map(pkg => ({
+      id: pkg.id,
+      name: pkg.name_ru || pkg.name,
+      nameKZ: pkg.name_kz,
+      nameRU: pkg.name_ru,
+      isActive: pkg.is_active,
+    }));
+    res.json(ids);
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка получения ID пакетов', details: error.message });
+  }
+});
+
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const packages = await Package.findAll();

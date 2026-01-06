@@ -5,9 +5,14 @@ let pool = null;
 
 export const getPool = () => {
   if (!pool) {
+    const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    const isRender = connectionString && connectionString.includes('render.com');
+    
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      connectionString: connectionString,
+      ssl: isRender || process.env.NODE_ENV === 'production' 
+        ? { rejectUnauthorized: false } 
+        : false,
     });
 
     pool.on('error', (err) => {

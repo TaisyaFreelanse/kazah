@@ -26,7 +26,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   TimerService? _timerService;
-  final PackageService _packageService = PackageService();
+  final PackageService _packageService = PackageService.instance;
   Map<String, Color> _packageColors = {};
   int _selectedAnswerIndex = -1;
   int _secondsRemaining = 23;
@@ -59,7 +59,7 @@ class _GameScreenState extends State<GameScreen> {
       },
     );
 
-    final questionService = QuestionService();
+    final questionService = QuestionService.instance;
     final selectedLanguage = languageProvider.currentLanguage;
 
     try {
@@ -378,7 +378,7 @@ class _GameScreenState extends State<GameScreen> {
     final currentQuestion = gameProvider.currentQuestion;
     if (currentQuestion == null) return;
 
-    final questionService = QuestionService();
+    final questionService = QuestionService.instance;
 
     final alternativeQuestion = questionService.getAlternativeQuestion(
       currentQuestion,

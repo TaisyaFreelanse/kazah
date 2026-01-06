@@ -5,19 +5,35 @@ import 'purchase_service.dart';
 import 'package_service.dart';
 import 'package_file_service.dart';
 import 'public_question_service.dart';
+import 'cache_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:convert';
 
 class QuestionService {
-  final ExcelParser _excelParser = ExcelParser();
+  static QuestionService? _instance;
+  static QuestionService get instance => _instance ??= QuestionService._();
+  
+  QuestionService._();
+  
+  final ExcelParser _excelParser = ExcelParser.instance;
   final PurchaseService _purchaseService = PurchaseService();
   final PackageFileService _packageFileService = PackageFileService();
   final PublicQuestionService _publicQuestionService = PublicQuestionService();
+  final CacheService _cacheService = CacheService.instance;
 
   Future<List<Question>> getQuestions({
     required String language,
     List<String> purchasedPackageIds = const [],
+    bool forceRefresh = false,
   }) async {
+    final cacheKey = 'questions_${language}_${purchasedPackageIds.join(',')}';
+    if (!forceRefresh) {
+      final cached = _cacheService.getCachedQuestions(cacheKey);
+      if (cached != null) {
+        return cached;
+      }
+    }
+
     List<Question> allQuestions = [];
     List<Question> baseQuestions = [];
 
@@ -45,7 +61,6 @@ class QuestionService {
             packageId: null,
           );
         } else {
-
           baseQuestions = await _loadBaseQuestionsFromAssets(language);
         }
       } catch (e) {
@@ -55,14 +70,15 @@ class QuestionService {
 
     allQuestions.addAll(baseQuestions);
 
-    for (final packageId in purchasedPackageIds) {
-      final packageQuestions = await _loadPackageQuestions(
-        packageId: packageId,
-        language: language,
+    final packageQuestionsFutures = purchasedPackageIds.map((packageId) => 
+      _loadPackageQuestions(packageId: packageId, language: language, forceRefresh: forceRefresh)
       );
+    final packageQuestionsLists = await Future.wait(packageQuestionsFutures);
+    for (final packageQuestions in packageQuestionsLists) {
       allQuestions.addAll(packageQuestions);
     }
 
+    _cacheService.cacheQuestions(cacheKey, allQuestions);
     return allQuestions;
   }
 
@@ -80,9 +96,10 @@ class QuestionService {
   Future<List<Question>> _loadPackageQuestions({
     required String packageId,
     required String language,
+    bool forceRefresh = false,
   }) async {
 
-    final packageService = PackageService();
+    final packageService = PackageService.instance;
     PackageInfo? packageInfo;
 
     try {
@@ -97,6 +114,7 @@ class QuestionService {
         final filePath = await _packageFileService.downloadPackageFile(
           packageId: packageId,
           language: language,
+          forceRefresh: forceRefresh,
         );
 
         if (filePath != null) {
@@ -147,12 +165,12 @@ class QuestionService {
 
     try {
       return await _excelParser.parseQuestions(
-      assetPath: assetPath,
-      packageId: packageId,
-    );
-  } catch (e) {
-    return [];
-  }
+        assetPath: assetPath,
+        packageId: packageId,
+      );
+    } catch (e) {
+      return [];
+    }
   }
 
   List<Question> selectGameQuestions(List<Question> allQuestions) {
@@ -173,7 +191,6 @@ class QuestionService {
     const int targetEasy = 4;
     const int targetMedium = 6;
     const int targetHard = 3;
-    const int totalTarget = 13;
 
     Set<String> usedQuestionTexts = {};
     List<Question> selectedEasy = [];
@@ -307,7 +324,7 @@ class QuestionService {
 
   Future<List<String>> getPurchasedPackages() async {
 
-    final packageService = PackageService();
+    final packageService = PackageService.instance;
     List<String> purchased = [];
 
     try {

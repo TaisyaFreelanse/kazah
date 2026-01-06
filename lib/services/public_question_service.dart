@@ -9,7 +9,7 @@ import 'dart:io' if (dart.library.html) 'dart_io_stub.dart' as io;
 
 class PublicQuestionService {
 
-  static const String _apiBaseUrl = 'https:
+  static const String _apiBaseUrl = 'http://localhost:3000';
 
   Future<Uint8List?> downloadPublicQuestionsFile({
     required String language,

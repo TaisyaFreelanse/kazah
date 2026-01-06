@@ -40,5 +40,28 @@ class Question {
       packageId: packageId,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'text': text,
+      'answers': answers,
+      'correctAnswerIndex': correctAnswerIndex,
+      'difficulty': difficulty.toString().split('.').last,
+      'packageId': packageId,
+    };
+  }
+
+  factory Question.fromJson(Map<String, dynamic> json) {
+    return Question(
+      text: json['text'] as String,
+      answers: List<String>.from(json['answers'] as List),
+      correctAnswerIndex: json['correctAnswerIndex'] as int,
+      difficulty: Difficulty.values.firstWhere(
+        (d) => d.toString().split('.').last == json['difficulty'],
+        orElse: () => Difficulty.medium,
+      ),
+      packageId: json['packageId'] as String?,
+    );
+  }
 }
 

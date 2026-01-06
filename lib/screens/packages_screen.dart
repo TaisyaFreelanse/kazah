@@ -9,6 +9,8 @@ import '../services/package_service.dart';
 import '../constants/colors.dart';
 import '../constants/strings.dart';
 import '../utils/responsive.dart';
+import '../services/cache_service.dart';
+import 'game_screen.dart';
 
 class PackagesScreen extends StatefulWidget {
   const PackagesScreen({super.key});
@@ -20,9 +22,10 @@ class PackagesScreen extends StatefulWidget {
 class _PackagesScreenState extends State<PackagesScreen>
     with SingleTickerProviderStateMixin {
   final PurchaseService _purchaseService = PurchaseService();
-  final PackageService _packageService = PackageService();
+  final PackageService _packageService = PackageService.instance;
   List<PackageInfo> _packages = [];
   bool _isLoading = true;
+  bool _testMode = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -39,8 +42,91 @@ class _PackagesScreenState extends State<PackagesScreen>
         curve: Curves.easeIn,
       ),
     );
-    _loadPackages();
     _setupPurchaseListener();
+    _loadPackagesInitial();
+    _loadTestMode();
+  }
+
+  Future<void> _loadTestMode() async {
+    final testMode = _purchaseService.getTestMode();
+    setState(() {
+      _testMode = testMode;
+    });
+  }
+
+  Future<void> _toggleTestMode() async {
+    final newMode = !_testMode;
+    await _purchaseService.setTestMode(newMode);
+    setState(() {
+      _testMode = newMode;
+    });
+    
+    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+    final currentLanguage = languageProvider.currentLanguage;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          currentLanguage == 'KZ'
+              ? 'Тест режимі ${newMode ? "қосылды" : "өшірілді"}'
+              : 'Тестовый режим ${newMode ? "включен" : "выключен"}',
+        ),
+        backgroundColor: newMode ? AppColors.correctAnswer : AppColors.textSecondary,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _loadPackagesInitial() async {
+    try {
+      final cachedPackages = await _packageService.getActivePackages();
+      if (cachedPackages.isNotEmpty && mounted) {
+        final productIds = cachedPackages.map((p) => p.getProductId()).toSet();
+        await _purchaseService.updateProductIds(productIds);
+        await _updatePackagesWithPurchaseStatus(cachedPackages);
+        _animationController.forward();
+      }
+    } catch (e) {
+    }
+    _loadPackages();
+  }
+
+  Future<void> _updatePackagesWithPurchaseStatus(List<PackageInfo> packages) async {
+    final purchaseChecks = packages.map((package) => 
+      _purchaseService.isPackagePurchased(package.id).then((isPurchased) => 
+        PackageInfo(
+          id: package.id,
+          nameKz: package.nameKz,
+          nameRu: package.nameRu,
+          color: package.color,
+          isPurchased: isPurchased,
+          price: package.price,
+        )
+      )
+    );
+    
+    final packagesWithPurchaseStatus = await Future.wait(purchaseChecks);
+
+    packagesWithPurchaseStatus.sort((a, b) {
+      final aName = a.getName('RU').toLowerCase();
+      final bName = b.getName('RU').toLowerCase();
+
+      if (aName.contains('больше вопросов') || aName.contains('көбірек сұрақтар')) return -1;
+      if (bName.contains('больше вопросов') || bName.contains('көбірек сұрақтар')) return 1;
+
+      if (aName.contains('история') || aName.contains('тарихы')) return -1;
+      if (bName.contains('история') || bName.contains('тарихы')) return 1;
+
+      return 0;
+    });
+
+    if (mounted) {
+      setState(() {
+        _packages = packagesWithPurchaseStatus;
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -56,40 +142,19 @@ class _PackagesScreenState extends State<PackagesScreen>
     });
 
     try {
-
       final packages = await _packageService.getActivePackages();
-
-      final packagesWithPurchaseStatus = <PackageInfo>[];
-      for (final package in packages) {
-        final isPurchased = await _purchaseService.isPackagePurchased(package.id);
-        packagesWithPurchaseStatus.add(PackageInfo(
-          id: package.id,
-          nameKz: package.nameKz,
-          nameRu: package.nameRu,
-          color: package.color,
-          isPurchased: isPurchased,
-          price: package.price,
-        ));
+      
+      if (packages.isEmpty) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
       }
 
-      packagesWithPurchaseStatus.sort((a, b) {
-        final aName = a.getName('RU').toLowerCase();
-        final bName = b.getName('RU').toLowerCase();
+      final productIds = packages.map((p) => p.getProductId()).toSet();
+      await _purchaseService.updateProductIds(productIds);
 
-        if (aName.contains('больше вопросов') || aName.contains('көбірек сұрақтар')) return -1;
-        if (bName.contains('больше вопросов') || bName.contains('көбірек сұрақтар')) return 1;
-
-        if (aName.contains('история') || aName.contains('тарихы')) return -1;
-        if (bName.contains('история') || bName.contains('тарихы')) return 1;
-
-        return 0;
-      });
-
-      setState(() {
-        _packages = packagesWithPurchaseStatus;
-        _isLoading = false;
-      });
-
+      await _updatePackagesWithPurchaseStatus(packages);
       _animationController.forward();
     } catch (e) {
       final moreQuestionsPurchased = await _purchaseService.isPackagePurchased('more_questions');
@@ -123,14 +188,14 @@ class _PackagesScreenState extends State<PackagesScreen>
 
   void _setupPurchaseListener() {
 
-    _purchaseService.onPurchaseUpdated = (packageId, success, error) {
+    _purchaseService.onPurchaseUpdated = (packageId, success, error) async {
       if (!mounted) return;
 
       final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
       final currentLanguage = languageProvider.currentLanguage;
 
       if (success) {
-
+        CacheService.instance.clearCache();
         _loadPackages();
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -145,8 +210,35 @@ class _PackagesScreenState extends State<PackagesScreen>
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+            duration: const Duration(seconds: 2),
+            action: _testMode
+                ? SnackBarAction(
+                    label: currentLanguage == 'KZ' ? 'Ойынға өту' : 'К игре',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const GameScreen(),
+                        ),
+                      );
+                    },
+                  )
+                : null,
           ),
         );
+
+        if (_testMode) {
+          await Future.delayed(const Duration(seconds: 2));
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const GameScreen(),
+              ),
+            );
+          }
+        }
       } else if (error != null) {
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -164,9 +256,13 @@ class _PackagesScreenState extends State<PackagesScreen>
   }
 
   Future<void> _handlePurchase(String packageId) async {
-
-    await _purchaseService.buyPackage(packageId);
-
+    final package = _packages.firstWhere(
+      (p) => p.id == packageId,
+      orElse: () => throw Exception('Пакет не найден'),
+    );
+    
+    final productId = package.getProductId();
+    await _purchaseService.buyPackage(packageId, productId: productId);
   }
 
   @override
@@ -225,19 +321,46 @@ class _PackagesScreenState extends State<PackagesScreen>
                         ),
                         SizedBox(width: Responsive.dp(context, 8)),
                         Expanded(
-                          child: Text(
-                            AppStrings.getString(
-                              AppStrings.additionalQuestions,
-                              currentLanguage,
-                            ),
-                            style: GoogleFonts.nunito(
-                              fontSize: Responsive.textSize(context, isSmallScreen ? 18 : 20),
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.cardBackground,
-                              letterSpacing: Responsive.dp(context, 0.3),
+                          child: GestureDetector(
+                            onLongPress: _toggleTestMode,
+                            child: Text(
+                              AppStrings.getString(
+                                AppStrings.additionalQuestions,
+                                currentLanguage,
+                              ),
+                              style: GoogleFonts.nunito(
+                                fontSize: Responsive.textSize(context, isSmallScreen ? 18 : 20),
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.cardBackground,
+                                letterSpacing: Responsive.dp(context, 0.3),
+                              ),
                             ),
                           ),
                         ),
+                        if (_testMode)
+                          Container(
+                            margin: EdgeInsets.only(left: Responsive.dp(context, 8)),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: Responsive.dp(context, 8),
+                              vertical: Responsive.dp(context, 4),
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.correctAnswer.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(Responsive.dp(context, 8)),
+                              border: Border.all(
+                                color: AppColors.correctAnswer,
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              'TEST',
+                              style: GoogleFonts.nunito(
+                                fontSize: Responsive.textSize(context, 10),
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.correctAnswer,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   );

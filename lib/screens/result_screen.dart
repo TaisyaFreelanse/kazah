@@ -50,7 +50,7 @@ class _ResultScreenState extends State<ResultScreen> {
     }
 
     try {
-      final excelParser = ExcelParser();
+      final excelParser = ExcelParser.instance;
       final publicQuestionService = PublicQuestionService();
       List<String> phrases = [];
 
@@ -128,7 +128,7 @@ class _ResultScreenState extends State<ResultScreen> {
           _isLoading = false;
         });
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       final random = Random();
       final isKazakh = currentLanguage.toUpperCase() == 'KZ';
 

@@ -7,6 +7,8 @@ import '../constants/colors.dart';
 import '../constants/strings.dart';
 import '../providers/language_provider.dart';
 import '../utils/responsive.dart';
+import '../services/package_service.dart';
+import '../models/package_info.dart';
 import 'packages_screen.dart';
 import 'game_screen.dart';
 import 'dart:io';
@@ -24,6 +26,7 @@ class _MainMenuScreenState extends State<MainMenuScreen>
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
   bool _isLoadingGame = false;
+  final PackageService _packageService = PackageService.instance;
 
   @override
   void initState() {
@@ -48,6 +51,13 @@ class _MainMenuScreenState extends State<MainMenuScreen>
     );
 
     _animationController.forward();
+    _preloadPackages();
+  }
+
+  void _preloadPackages() {
+    _packageService.getActivePackages().catchError((error) {
+      return <PackageInfo>[];
+    });
   }
 
   @override

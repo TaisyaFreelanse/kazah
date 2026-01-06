@@ -8,12 +8,23 @@ import '../models/question.dart';
 import 'dart:io' if (dart.library.html) 'dart_io_stub.dart' as io;
 
 class ExcelParser {
+  static ExcelParser? _instance;
+  static ExcelParser get instance => _instance ??= ExcelParser._();
+  
+  ExcelParser._();
+  
+  final Map<String, List<Question>> _parseCache = {};
 
   Future<List<Question>> parseQuestions({
     required String assetPath,
     Difficulty? difficulty,
     String? packageId,
   }) async {
+    final cacheKey = '${assetPath}_${difficulty?.toString() ?? 'all'}_${packageId ?? 'none'}';
+    if (_parseCache.containsKey(cacheKey)) {
+      return _parseCache[cacheKey]!;
+    }
+    
     try {
       Uint8List bytes;
 
@@ -110,8 +121,9 @@ class ExcelParser {
         }
       }
 
+      _parseCache[cacheKey] = questions;
       return questions;
-    } catch (e, stackTrace) {
+    } catch (e) {
       return [];
     }
   }

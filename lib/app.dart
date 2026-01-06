@@ -3,10 +3,28 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'providers/language_provider.dart';
 import 'providers/game_provider.dart';
+import 'services/cache_service.dart';
+import 'services/package_service.dart';
 import 'screens/main_menu_screen.dart';
 
-class BlimBilemApp extends StatelessWidget {
+class BlimBilemApp extends StatefulWidget {
   const BlimBilemApp({super.key});
+
+  @override
+  State<BlimBilemApp> createState() => _BlimBilemAppState();
+}
+
+class _BlimBilemAppState extends State<BlimBilemApp> {
+  @override
+  void initState() {
+    super.initState();
+    _preloadData();
+  }
+
+  void _preloadData() async {
+    await CacheService.instance.initialize();
+    PackageService.instance.getActivePackages();
+  }
 
   @override
   Widget build(BuildContext context) {

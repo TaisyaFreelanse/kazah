@@ -31,6 +31,38 @@ class PackageBadge extends StatelessWidget {
           ),
         ],
       ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(
+            Icons.description,
+            color: Colors.white,
+            size: size * 0.6,
+          ),
+          Positioned(
+            bottom: size * 0.15,
+            right: size * 0.15,
+            child: Container(
+              width: size * 0.35,
+              height: size * 0.35,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  '?',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: size * 0.25,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
