@@ -10,7 +10,7 @@ class PackageService {
   
   PackageService._();
 
-  static const String _apiBaseUrl = 'http://localhost:3000';
+  static const String _apiBaseUrl = 'https://blim-bilem-admin-backend.onrender.com';
 
   List<PackageInfo>? _cachedPackages;
   DateTime? _cacheTimestamp;
@@ -51,13 +51,17 @@ class PackageService {
 
   Future<List<PackageInfo>> _fetchPackages() async {
     try {
+      print('🌐 Запрос пакетов из API: $_apiBaseUrl/api/public/packages');
       final response = await http.get(
         Uri.parse('$_apiBaseUrl/api/public/packages'),
         headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 10));
 
+      print('📡 Ответ API: статус ${response.statusCode}');
+      
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
+        print('✅ Получено пакетов из API: ${data.length}');
         final packages = data.map((json) => PackageInfo.fromJson(json)).toList();
 
         _cachedPackages = packages;
@@ -65,9 +69,11 @@ class PackageService {
 
         return packages;
       } else {
+        print('❌ Ошибка загрузки пакетов: статус ${response.statusCode}, тело: ${response.body}');
         return _getDefaultPackages();
       }
     } catch (e) {
+      print('❌ Исключение при загрузке пакетов: $e');
       return _getDefaultPackages();
     }
   }

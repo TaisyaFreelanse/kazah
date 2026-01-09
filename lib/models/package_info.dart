@@ -20,25 +20,15 @@ class PackageInfo {
   });
 
   String getProductId() {
+    // Если productId указан в API - используем его
     if (productId != null && productId!.isNotEmpty) {
+      print('📦 Package $id: используем productId из API: $productId');
       return productId!;
     }
     
-    final nameRuLower = nameRu.toLowerCase();
-    final nameKzLower = nameKz.toLowerCase();
-    
-    if (nameRuLower.contains('больше вопросов') || 
-        nameKzLower.contains('көбірек сұрақтар') ||
-        nameRuLower.contains('more questions')) {
-      return 'more_questions';
-    }
-    
-    if (nameRuLower.contains('история') || 
-        nameKzLower.contains('тарих') ||
-        nameRuLower.contains('history')) {
-      return 'history';
-    }
-    
+    // Иначе используем числовой ID пакета напрямую
+    // В Google Play зарегистрированы числовые ID: 5, 6, 7, 8
+    print('📦 Package $id: используем ID пакета как productId: $id');
     return id;
   }
 
@@ -47,14 +37,19 @@ class PackageInfo {
   }
 
   factory PackageInfo.fromJson(Map<String, dynamic> json) {
+    final packageId = json['id'].toString();
+    final productId = json['productId'] ?? json['product_id'];
+    
+    print('📦 Создание PackageInfo: id=$packageId, productId=$productId');
+    
     return PackageInfo(
-      id: json['id'].toString(),
+      id: packageId,
       nameKz: json['nameKZ'] ?? json['name'] ?? '',
       nameRu: json['nameRU'] ?? json['name'] ?? '',
       color: _hexToColor(json['iconColor'] ?? '#4CAF50'),
       isPurchased: false,
       price: json['price'] != null ? int.tryParse(json['price'].toString()) : null,
-      productId: json['productId'] ?? json['product_id'],
+      productId: productId,
     );
   }
 

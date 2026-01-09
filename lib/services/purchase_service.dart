@@ -10,7 +10,7 @@ class PurchaseService {
   static const String _purchasedPackagesKey = 'purchased_packages';
   static const String _testModeKey = 'test_purchase_mode';
 
-  Set<String> _productIds = {'more_questions', 'history'};
+  Set<String> _productIds = {};
 
   List<ProductDetails> _products = [];
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
@@ -31,11 +31,13 @@ class PurchaseService {
       if (savedTestMode != null) {
         _testMode = savedTestMode;
       } else {
-        _testMode = true;
-        await prefs.setBool(_testModeKey, true);
+        _testMode = kIsWeb;
+        if (_testMode) {
+          await prefs.setBool(_testModeKey, true);
+        }
       }
     } catch (e) {
-      _testMode = true;
+      _testMode = kIsWeb;
     }
   }
 
@@ -53,33 +55,20 @@ class PurchaseService {
   Future<void> _init() async {
     if (kIsWeb || _iap == null) {
       _isAvailable = false;
-      if (!_testMode) {
-        await _enableTestMode();
-      }
       return;
     }
 
     try {
       _isAvailable = await _iap!.isAvailable();
-      if (!_isAvailable) {
-        if (!_testMode) {
-          await _enableTestMode();
-        }
-        return;
-      }
+    if (!_isAvailable) {
+      return;
+    }
     } catch (e) {
       _isAvailable = false;
-      if (!_testMode) {
-        await _enableTestMode();
-      }
       return;
     }
 
     await loadProducts();
-    
-    if (_products.isEmpty && !_testMode) {
-      await _enableTestMode();
-    }
 
     _purchaseSubscription = _iap!.purchaseStream.listen(
       _listenToPurchaseUpdated,
@@ -91,38 +80,43 @@ class PurchaseService {
     );
   }
 
-  Future<void> _enableTestMode() async {
-    _testMode = true;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_testModeKey, true);
-    } catch (e) {
-    }
-  }
 
   Future<void> loadProducts() async {
     if (!_isAvailable || _iap == null) return;
 
     try {
+      if (_productIds.isEmpty) {
+        return; // Нет продуктов для загрузки
+      }
+      
       final ProductDetailsResponse response =
           await _iap!.queryProductDetails(_productIds);
 
+      // Проверяем, какие продукты не найдены
+      if (response.notFoundIDs.isNotEmpty) {
+        print('⚠️ Продукты не найдены в Google Play: ${response.notFoundIDs.join(", ")}');
+        print('📦 Запрошенные product IDs: ${_productIds.join(", ")}');
+      }
+      
+      if (response.error != null) {
+        print('❌ Ошибка загрузки продуктов: ${response.error}');
+      }
+
       _products = response.productDetails;
       
-      if (response.notFoundIDs.isNotEmpty && !_testMode) {
-        await _enableTestMode();
+      if (_products.isNotEmpty) {
+        print('✅ Загружено продуктов: ${_products.length}');
+        print('📦 Найденные продукты: ${_products.map((p) => p.id).join(", ")}');
       }
     } catch (e) {
-      if (!_testMode) {
-        await _enableTestMode();
-      }
+      print('❌ Исключение при загрузке продуктов: $e');
     }
   }
 
   Future<void> updateProductIds(Set<String> packageIds) async {
     _productIds = packageIds;
     await loadProducts();
-  }
+    }
 
   Future<void> _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) async {
     for (var purchaseDetails in purchaseDetailsList) {
@@ -157,12 +151,15 @@ class PurchaseService {
   Future<void> _handleSuccessfulPurchase(
       PurchaseDetails purchaseDetails) async {
     final productId = purchaseDetails.productID;
+    print('✅ Успешная покупка: productId=$productId');
     
     final prefs = await SharedPreferences.getInstance();
     final packageIdKey = prefs.getString('product_${productId}_packageId');
     final packageId = packageIdKey ?? productId;
+    print('📦 Сохранение покупки: productId=$productId -> packageId=$packageId');
 
     await markPackageAsPurchased(packageId);
+    print('💾 Пакет $packageId помечен как купленный');
     CacheService.instance.clearCache();
     await onPurchaseUpdated?.call(packageId, true, null);
   }
@@ -170,15 +167,20 @@ class PurchaseService {
   Future<bool> isPackagePurchased(String packageId) async {
     final prefs = await SharedPreferences.getInstance();
     final purchased = prefs.getStringList(_purchasedPackagesKey) ?? [];
+    
+    print('🔍 Проверка покупки пакета $packageId: купленные пакеты = [${purchased.join(", ")}]');
 
     if (purchased.contains(packageId)) {
+      print('✅ Пакет $packageId найден в списке купленных');
       return true;
     }
 
     if (_testMode || !_isAvailable) {
+      print('⚠️ Тестовый режим или покупки недоступны: testMode=$_testMode, available=$_isAvailable');
       return false;
     }
 
+    print('❌ Пакет $packageId не найден в списке купленных');
     return false;
   }
 
@@ -188,15 +190,22 @@ class PurchaseService {
     if (!purchased.contains(packageId)) {
       purchased.add(packageId);
       await prefs.setStringList(_purchasedPackagesKey, purchased);
+      print('💾 Пакет $packageId добавлен в список купленных. Всего куплено: ${purchased.length}');
+    } else {
+      print('ℹ️ Пакет $packageId уже был в списке купленных');
     }
   }
 
   Future<bool> buyPackage(String packageId, {String? productId}) async {
     final actualProductId = productId ?? packageId;
     
+    print('🛒 Попытка покупки: packageId=$packageId, productId=$actualProductId');
+    print('📦 Доступные продукты в Google Play: ${_products.map((p) => p.id).join(", ")}');
+    print('📋 Загруженные product IDs: ${_productIds.join(", ")}');
+    
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('product_${actualProductId}_packageId', packageId);
-    if (_testMode || kIsWeb) {
+    if (kIsWeb) {
       await Future.delayed(const Duration(milliseconds: 500));
       await markPackageAsPurchased(packageId);
       CacheService.instance.clearCache();
@@ -210,21 +219,6 @@ class PurchaseService {
     }
 
     if (!_isAvailable) {
-      if (!_testMode) {
-        await _enableTestMode();
-      }
-      if (_testMode) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        await markPackageAsPurchased(packageId);
-        CacheService.instance.clearCache();
-        final packageFileService = PackageFileService();
-        try {
-          await packageFileService.clearCacheForPackage(packageId);
-        } catch (e) {
-        }
-        await onPurchaseUpdated?.call(packageId, true, null);
-        return true;
-      }
       await onPurchaseUpdated?.call(packageId, false, 'Покупки недоступны');
       return false;
     }
@@ -241,7 +235,7 @@ class PurchaseService {
         product = _products.firstWhere(
           (p) => p.id == actualProductId,
           orElse: () => throw Exception('Продукт не найден: $actualProductId'),
-        );
+    );
       }
 
       final PurchaseParam purchaseParam = PurchaseParam(
@@ -297,25 +291,12 @@ class PurchaseService {
           return false;
         }
       } else {
-        if (!_testMode && (e.toString().contains('не найден') || e.toString().contains('not found'))) {
-          await _enableTestMode();
-          await Future.delayed(const Duration(milliseconds: 500));
-          await markPackageAsPurchased(packageId);
-          CacheService.instance.clearCache();
-          final packageFileService = PackageFileService();
-          try {
-            await packageFileService.clearCacheForPackage(packageId);
-          } catch (e2) {
-          }
-          await onPurchaseUpdated?.call(packageId, true, null);
-          return true;
-        }
         await onPurchaseUpdated?.call(
-          packageId,
-          false,
-          e.toString(),
-        );
-        return false;
+        packageId,
+        false,
+        e.toString(),
+      );
+      return false;
       }
     }
   }

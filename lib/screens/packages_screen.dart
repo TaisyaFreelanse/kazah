@@ -6,6 +6,7 @@ import '../providers/language_provider.dart';
 import '../models/package_info.dart';
 import '../services/purchase_service.dart';
 import '../services/package_service.dart';
+import '../services/package_file_service.dart';
 import '../constants/colors.dart';
 import '../constants/strings.dart';
 import '../utils/responsive.dart';
@@ -152,6 +153,9 @@ class _PackagesScreenState extends State<PackagesScreen>
       }
 
       final productIds = packages.map((p) => p.getProductId()).toSet();
+      print('📦 Загружено пакетов из API: ${packages.length}');
+      print('🆔 ID пакетов: ${packages.map((p) => p.id).join(", ")}');
+      print('🆔 Product IDs для Google Play: ${productIds.join(", ")}');
       await _purchaseService.updateProductIds(productIds);
 
       await _updatePackagesWithPurchaseStatus(packages);
@@ -195,7 +199,18 @@ class _PackagesScreenState extends State<PackagesScreen>
       final currentLanguage = languageProvider.currentLanguage;
 
       if (success) {
+        print('🔄 Очистка кэша после покупки пакета $packageId');
         CacheService.instance.clearCache();
+        
+        // Очищаем кэш файлов пакета
+        final packageFileService = PackageFileService();
+        try {
+          await packageFileService.clearCacheForPackage(packageId);
+          print('✅ Кэш файлов пакета $packageId очищен');
+        } catch (e) {
+          print('⚠️ Ошибка очистки кэша файлов пакета $packageId: $e');
+        }
+        
         _loadPackages();
 
         ScaffoldMessenger.of(context).showSnackBar(

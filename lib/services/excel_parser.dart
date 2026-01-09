@@ -102,14 +102,14 @@ class ExcelParser {
           if (rowIndex == 0 && _isHeaderRow(row)) continue;
 
           List<String> answers = [];
-          for (int i = 1; i <= 6 && i < row.length; i++) {
+          for (int i = 1; i <= 5 && i < row.length; i++) {
             final answer = _getCellValue(row[i]);
             if (answer.isNotEmpty) {
               answers.add(answer);
             }
           }
 
-          if (answers.length < 6) continue;
+          if (answers.length < 5) continue;
 
           questions.add(Question(
             text: questionText,

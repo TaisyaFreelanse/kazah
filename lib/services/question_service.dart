@@ -70,13 +70,17 @@ class QuestionService {
 
     allQuestions.addAll(baseQuestions);
 
+    print('📋 Загрузка вопросов из ${purchasedPackageIds.length} купленных пакетов: ${purchasedPackageIds.join(", ")}');
     final packageQuestionsFutures = purchasedPackageIds.map((packageId) => 
       _loadPackageQuestions(packageId: packageId, language: language, forceRefresh: forceRefresh)
       );
     final packageQuestionsLists = await Future.wait(packageQuestionsFutures);
+    int totalPackageQuestions = 0;
     for (final packageQuestions in packageQuestionsLists) {
       allQuestions.addAll(packageQuestions);
+      totalPackageQuestions += packageQuestions.length;
     }
+    print('✅ Всего загружено вопросов из пакетов: $totalPackageQuestions');
 
     _cacheService.cacheQuestions(cacheKey, allQuestions);
     return allQuestions;
@@ -98,19 +102,28 @@ class QuestionService {
     required String language,
     bool forceRefresh = false,
   }) async {
+    print('📦 Загрузка вопросов из пакета: ID=$packageId, язык=$language');
 
     final packageService = PackageService.instance;
     PackageInfo? packageInfo;
 
     try {
       packageInfo = await packageService.getPackageById(packageId);
+      if (packageInfo != null) {
+        print('✅ Пакет найден: ${packageInfo.nameRu} (${packageInfo.nameKz})');
+      } else {
+        print('⚠️ Пакет не найден: ID=$packageId');
+      }
     } catch (e) {
+      print('❌ Ошибка загрузки информации о пакете $packageId: $e');
     }
 
     final isNumericId = int.tryParse(packageId) != null;
+    print('🔢 Numeric ID: $isNumericId');
 
     if (isNumericId && packageInfo != null) {
       try {
+        print('📥 Загрузка файла пакета $packageId для языка $language...');
         final filePath = await _packageFileService.downloadPackageFile(
           packageId: packageId,
           language: language,
@@ -118,15 +131,29 @@ class QuestionService {
         );
 
         if (filePath != null) {
+          print('✅ Файл загружен: $filePath');
           try {
-            return await _excelParser.parseQuestions(
+            final questions = await _excelParser.parseQuestions(
               assetPath: filePath,
               packageId: packageId,
             );
+            print('✅ Вопросы распарсены: ${questions.length} вопросов из пакета $packageId');
+            return questions;
           } catch (e) {
+            print('❌ Ошибка парсинга вопросов из пакета $packageId: $e');
           }
+        } else {
+          print('⚠️ Файл пакета $packageId не загружен (filePath == null)');
         }
       } catch (e) {
+        print('❌ Ошибка загрузки файла пакета $packageId: $e');
+      }
+    } else {
+      if (!isNumericId) {
+        print('⚠️ ID пакета не числовой: $packageId');
+      }
+      if (packageInfo == null) {
+        print('⚠️ Информация о пакете не найдена: $packageId');
       }
     }
 
@@ -323,16 +350,19 @@ class QuestionService {
   }
 
   Future<List<String>> getPurchasedPackages() async {
+    print('🔍 Проверка купленных пакетов...');
 
     final packageService = PackageService.instance;
     List<String> purchased = [];
 
     try {
       final packages = await packageService.getActivePackages();
+      print('📦 Найдено активных пакетов: ${packages.length}');
 
       for (final package in packages) {
-
-        if (await _purchaseService.isPackagePurchased(package.id)) {
+        final isPurchased = await _purchaseService.isPackagePurchased(package.id);
+        print('  - Пакет ${package.id} (${package.nameRu}): ${isPurchased ? "✅ куплен" : "❌ не куплен"}');
+        if (isPurchased) {
           purchased.add(package.id);
         }
       }
@@ -355,6 +385,7 @@ class QuestionService {
       }
     }
 
+    print('✅ Итого купленных пакетов: ${purchased.length} (${purchased.join(", ")})');
     return purchased;
   }
 
